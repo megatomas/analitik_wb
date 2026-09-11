@@ -1,7 +1,61 @@
-import { AlertTriangle, Package, TrendingUp, CheckCircle, Clock, Truck } from 'lucide-react';
-import { stockRecommendations } from '../data/mockData';
+import { useState, useEffect } from 'react';
+import { AlertTriangle, Package, TrendingUp, CheckCircle, Clock, Truck, Loader2, AlertCircle } from 'lucide-react';
+import { useWBApi } from '../services/wbApi';
+import { useAuth } from '../contexts/AuthContext';
 
 export default function StockRecommendations() {
+  const { user } = useAuth();
+  const { getStockRecommendations } = useWBApi();
+  const [stockRecommendations, setStockRecommendations] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchStocks = async () => {
+      if (!user?.wbApiKey) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getStockRecommendations();
+        setStockRecommendations(data);
+      } catch (err) {
+        setError('Не удалось загрузить данные об остатках.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStocks();
+  }, [user?.wbApiKey]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 size={40} className="animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-gray-600">Анализируем остатки и продажи...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center bg-red-50 border border-red-200 rounded-xl p-6 max-w-md">
+          <AlertCircle size={40} className="text-red-600 mx-auto mb-4" />
+          <p className="text-red-800 font-medium mb-2">Ошибка загрузки</p>
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
   const critical = stockRecommendations.filter((r) => r.urgency === 'critical');
   const warning = stockRecommendations.filter((r) => r.urgency === 'warning');
   const ok = stockRecommendations.filter((r) => r.urgency === 'ok');
