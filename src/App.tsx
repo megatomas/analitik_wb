@@ -9,7 +9,6 @@ import Platforms from './components/Platforms';
 import VercelDeploy from './components/VercelDeploy';
 import AuthPage from './components/AuthPage';
 import ApiSetup from './components/ApiSetup';
-import SaasGuide from './components/SaasGuide';
 import { Bell, Search, Menu, X, LogOut, Key } from 'lucide-react';
 import { notifications } from './data/mockData';
 
@@ -63,8 +62,6 @@ function AppContent() {
         return <Platforms />;
       case 'deploy':
         return <VercelDeploy />;
-      case 'saas':
-        return <SaasGuide />;
       default:
         return <Dashboard period={period} setPeriod={setPeriod} />;
     }

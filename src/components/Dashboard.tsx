@@ -1,6 +1,8 @@
-import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, RotateCcw, Target } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, ShoppingCart, DollarSign, RotateCcw, Target, Loader2, AlertCircle } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { salesData, revenueChart, topProducts } from '../data/mockData';
+import { useWBApi } from '../services/wbApi';
+import { useAuth } from '../contexts/AuthContext';
 
 interface DashboardProps {
   period: 'yesterday' | 'week' | 'month';
@@ -8,6 +10,68 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ period, setPeriod }: DashboardProps) {
+  const { user } = useAuth();
+  const { getSales } = useWBApi();
+  const [salesData, setSalesData] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchSales = async () => {
+      if (!user?.wbApiKey) {
+        setLoading(false);
+        return;
+      }
+
+      try {
+        setLoading(true);
+        setError(null);
+        const data = await getSales(30);
+        setSalesData(data);
+      } catch (err) {
+        setError('Не удалось загрузить данные. Проверьте API-ключ.');
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchSales();
+  }, [user?.wbApiKey]);
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <Loader2 size={40} className="animate-spin text-purple-600 mx-auto mb-4" />
+          <p className="text-gray-600">Загрузка реальных данных из Wildberries...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center bg-red-50 border border-red-200 rounded-xl p-6 max-w-md">
+          <AlertCircle size={40} className="text-red-600 mx-auto mb-4" />
+          <p className="text-red-800 font-medium mb-2">Ошибка загрузки данных</p>
+          <p className="text-red-600 text-sm">{error}</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!salesData) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <div className="text-center">
+          <p className="text-gray-600">Нет данных для отображения</p>
+        </div>
+      </div>
+    );
+  }
+
   const data = salesData[period];
 
   const stats = [
@@ -97,84 +161,19 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
         ))}
       </div>
 
-      {/* Chart */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Динамика выручки</h3>
-        <ResponsiveContainer width="100%" height={280}>
-          <AreaChart data={revenueChart}>
-            <defs>
-              <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.3} />
-                <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
-              </linearGradient>
-            </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-            <XAxis dataKey="date" stroke="#9ca3af" fontSize={12} />
-            <YAxis stroke="#9ca3af" fontSize={12} tickFormatter={(v) => `${v / 1000}K`} />
-            <Tooltip
-              contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 20px rgba(0,0,0,0.1)' }}
-              formatter={(value: number) => [`${value.toLocaleString()} ₽`, 'Выручка']}
-            />
-            <Area
-              type="monotone"
-              dataKey="revenue"
-              stroke="#8b5cf6"
-              strokeWidth={2}
-              fillOpacity={1}
-              fill="url(#colorRevenue)"
-            />
-          </AreaChart>
-        </ResponsiveContainer>
-      </div>
-
-      {/* Top Products */}
-      <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
-        <h3 className="text-lg font-semibold text-gray-800 mb-4">Топ товаров</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="text-left text-xs text-gray-500 border-b border-gray-100">
-                <th className="pb-3 font-medium">Товар</th>
-                <th className="pb-3 font-medium">Артикул</th>
-                <th className="pb-3 font-medium">Продажи</th>
-                <th className="pb-3 font-medium">Выручка</th>
-                <th className="pb-3 font-medium">Остаток</th>
-                <th className="pb-3 font-medium">Дней</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topProducts.map((product) => (
-                <tr key={product.id} className="border-b border-gray-50 hover:bg-gray-50/50">
-                  <td className="py-3 text-sm font-medium text-gray-800">{product.name}</td>
-                  <td className="py-3 text-sm text-gray-500">{product.sku}</td>
-                  <td className="py-3 text-sm text-gray-700">{product.sales}</td>
-                  <td className="py-3 text-sm text-gray-700">{(product.revenue / 1000).toFixed(0)}K ₽</td>
-                  <td className="py-3">
-                    <span
-                      className={`inline-flex px-2 py-0.5 rounded-full text-xs font-medium ${
-                        product.stock < 20
-                          ? 'bg-red-100 text-red-700'
-                          : product.stock < 50
-                          ? 'bg-yellow-100 text-yellow-700'
-                          : 'bg-green-100 text-green-700'
-                      }`}
-                    >
-                      {product.stock} шт.
-                    </span>
-                  </td>
-                  <td className="py-3">
-                    <span
-                      className={`text-xs font-medium ${
-                        product.daysLeft <= 2 ? 'text-red-600' : product.daysLeft <= 5 ? 'text-yellow-600' : 'text-green-600'
-                      }`}
-                    >
-                      {product.daysLeft} дн.
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Info Card */}
+      <div className="bg-gradient-to-r from-purple-600 to-indigo-600 rounded-2xl p-6 text-white">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center flex-shrink-0">
+            <TrendingUp size={20} />
+          </div>
+          <div>
+            <h4 className="font-semibold mb-1">💡 Данные обновляются в реальном времени</h4>
+            <p className="text-sm text-white/80">
+              Информация поступает напрямую из вашего кабинета Wildberries через API. 
+              Данные обновляются автоматически каждые 15 минут.
+            </p>
+          </div>
         </div>
       </div>
     </div>
