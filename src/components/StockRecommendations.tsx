@@ -140,6 +140,15 @@ export default function StockRecommendations() {
                     {rec.urgency === 'critical' ? 'Критично' : rec.urgency === 'warning' ? 'Внимание' : 'OK'}
                   </span>
                 </div>
+                <div className="flex items-center gap-3 mb-1">
+                  <span className="text-xs text-gray-500">WB артикул: <span className="font-mono font-medium text-gray-700">{rec.productId}</span></span>
+                  {rec.vendorCode && (
+                    <span className="text-xs text-gray-500">Артикул продавца: <span className="font-mono font-medium text-gray-700">{rec.vendorCode}</span></span>
+                  )}
+                  {rec.barcode && (
+                    <span className="text-xs text-gray-500">Баркод: <span className="font-mono font-medium text-gray-700">{rec.barcode}</span></span>
+                  )}
+                </div>
                 <p className="text-sm text-gray-500">{rec.reason}</p>
               </div>
 

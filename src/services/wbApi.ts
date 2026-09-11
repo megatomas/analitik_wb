@@ -25,10 +25,17 @@ export interface SalesData {
   conversion: number;
 }
 
+export interface TopProduct {
+  nmId: number;
+  orders: number;
+  revenue: number;
+}
+
 export interface SalesResponse {
   yesterday: SalesData;
   week: SalesData;
   month: SalesData;
+  topProducts: TopProduct[];
 }
 
 export interface StockItem {
@@ -44,6 +51,8 @@ export interface StockItem {
 export interface StockRecommendation {
   productId: number;
   productName: string;
+  vendorCode?: string; // Артикул продавца
+  barcode?: string; // Баркод
   currentStockWB: number;
   currentStockSeller: number;
   totalStock: number;
@@ -241,10 +250,30 @@ export function useWBApi() {
       (o: any) => new Date(o.createdAt) >= weekAgo
     );
 
+    // Группируем заказы по nmId для топ-товаров
+    const productStats = new Map<number, { orders: number; revenue: number }>();
+    orders.forEach((order: any) => {
+      if (order.status === 'cancel' || order.status === 'return') return;
+      const nmId = order.nmId;
+      if (!nmId) return;
+      
+      const current = productStats.get(nmId) || { orders: 0, revenue: 0 };
+      current.orders += 1;
+      current.revenue += order.sellerPrice || 0;
+      productStats.set(nmId, current);
+    });
+
+    // Топ-5 товаров по количеству заказов
+    const topProducts = Array.from(productStats.entries())
+      .map(([nmId, stats]) => ({ nmId, ...stats }))
+      .sort((a, b) => b.orders - a.orders)
+      .slice(0, 5);
+
     const result = {
       yesterday: calculateMetrics(yesterdayOrders),
       week: calculateMetrics(weekOrders),
       month: calculateMetrics(orders),
+      topProducts,
     };
 
     setCache(cacheKey, result);
@@ -381,6 +410,45 @@ export function useWBApi() {
       });
     }
 
+    // Пытаемся получить информацию о товарах из Content API
+    const productInfo = new Map<number, { title?: string; vendorCode?: string; barcode?: string }>();
+    
+    try {
+      await delay(2000); // Ждём 2 секунды перед запросом к Content API
+      
+      // Запрос к Content API для получения названий товаров
+      const nmIds = Array.from(allProductIds).slice(0, 20); // Топ-20 товаров
+      const cardsResponse = await fetchViaProxy(
+        'POST',
+        'https://content-api.wildberries.ru/content/v2/get/cards/list',
+        {
+          settings: {
+            cursor: { limit: 100 },
+            filter: {
+              withPhoto: -1,
+              textSearch: nmIds.join(','),
+            },
+          },
+        }
+      );
+      
+      // Парсим ответ Content API
+      if (cardsResponse?.data?.cards) {
+        cardsResponse.data.cards.forEach((card: any) => {
+          if (card.nmID) {
+            productInfo.set(card.nmID, {
+              title: card.title || card.subjectName,
+              vendorCode: card.vendorCode,
+              barcode: card.barcodes?.[0] || card.sizes?.[0]?.skus?.[0],
+            });
+          }
+        });
+      }
+    } catch (error) {
+      console.warn('[WB API] Не удалось получить информацию о товарах из Content API:', error);
+      // Продолжаем без информации о товарах
+    }
+
     // Формируем рекомендации
     const result = Array.from(allProductIds)
       .map((nmId: number) => {
@@ -415,9 +483,15 @@ export function useWBApi() {
           reason = `Достаточный запас на ${Math.min(daysUntilStockout, 999)} дней`;
         }
 
+        // Получаем информацию о товаре если доступна
+        const info = productInfo.get(nmId);
+        const productName = info?.title || `Артикул ${nmId}`;
+
         return {
           productId: nmId,
-          productName: `Артикул ${nmId}`,
+          productName,
+          vendorCode: info?.vendorCode,
+          barcode: info?.barcode,
           currentStockWB,
           currentStockSeller,
           totalStock,
