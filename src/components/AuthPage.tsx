@@ -225,6 +225,13 @@ export default function AuthPage() {
             {' '}и{' '}
             <a href="#" className="text-purple-600 hover:underline">Политикой конфиденциальности</a>
           </p>
+
+          {/* Info about browser storage */}
+          <div className="mt-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+            <p className="text-xs text-blue-800">
+              <strong>ℹ️ Важно:</strong> Данные сохраняются в вашем браузере. При использовании режима инкогнито или очистке кэша потребуется повторный ввод API-ключа.
+            </p>
+          </div>
         </div>
       </div>
     </div>

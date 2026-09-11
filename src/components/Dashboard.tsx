@@ -31,11 +31,26 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
         setLoading(true);
         setError(null);
         const data = await getSales();
-        setRealData(data);
-        setShowDemo(false);
+        
+        // Проверяем что данные не пустые
+        const hasData = data.yesterday.orders > 0 || data.week.orders > 0 || data.month.orders > 0;
+        
+        if (hasData) {
+          setRealData(data);
+          setShowDemo(false);
+        } else {
+          // Нет продаж — показываем демо с пометкой
+          setRealData(null);
+          setShowDemo(true);
+          setError({
+            message: 'Нет данных о продажах',
+            details: 'В вашем магазине пока нет продаж за выбранный период, или API-ключ не имеет доступа к разделу "Статистика".',
+            status: 200,
+          });
+        }
       } catch (err: any) {
         setError(err);
-        setShowDemo(true); // Показываем демо если API недоступен
+        setShowDemo(true);
         console.error('Ошибка загрузки:', err);
       } finally {
         setLoading(false);
@@ -122,14 +137,27 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
                         <ul className="list-disc pl-4 space-y-0.5">
                           {error.status === 429 ? (
                             <>
-                              <li>Превышен лимит запросов к WB API (10 запросов/мин)</li>
+                              <li>Превышен лимит запросов к WB API</li>
                               <li>Слишком частые обновления страницы</li>
+                            </>
+                          ) : error.status === 401 ? (
+                            <>
+                              <li>API-ключ недействителен или отозван</li>
+                              <li>Ключ скопирован неправильно</li>
+                            </>
+                          ) : error.status === 403 ? (
+                            <>
+                              <li>У ключа нет прав на "Статистика" или "Аналитика"</li>
+                              <li>Ключ создан без нужных категорий</li>
+                            </>
+                          ) : error.status === 200 ? (
+                            <>
+                              <li>В магазине пока нет продаж</li>
+                              <li>API-ключ не имеет доступа к статистике</li>
                             </>
                           ) : (
                             <>
-                              <li>Серверные функции ещё не развернулись на Vercel</li>
-                              <li>API-ключ недействителен или отозван</li>
-                              <li>У ключа нет прав на "Статистика" или "Аналитика"</li>
+                              <li>Проблема с подключением к WB API</li>
                               <li>Wildberries API временно недоступен</li>
                             </>
                           )}
@@ -139,14 +167,18 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
                           {error.status === 429 ? (
                             <>
                               <li>Подождите 1-2 минуты</li>
-                              <li>Обновите страницу (данные кэшируются на 5 минут)</li>
-                              <li>Не обновляйте страницу слишком часто</li>
+                              <li>Обновите страницу (данные кэшируются на 3 минуты)</li>
+                            </>
+                          ) : error.status === 401 || error.status === 403 ? (
+                            <>
+                              <li>Откройте настройки профиля (клик на аватар)</li>
+                              <li>Проверьте или обновите API-ключ</li>
+                              <li>Убедитесь что отмечены: Статистика + Аналитика</li>
                             </>
                           ) : (
                             <>
-                              <li>Убедитесь что запушили изменения на GitHub: <code className="bg-gray-100 px-1 rounded">git push</code></li>
-                              <li>Проверьте логи в Vercel Dashboard → Functions</li>
-                              <li>Проверьте права API-ключа в кабинете WB (нужны: Статистика + Аналитика)</li>
+                              <li>Проверьте интернет-соединение</li>
+                              <li>Попробуйте обновить страницу через минуту</li>
                             </>
                           )}
                         </ul>
