@@ -39,13 +39,14 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
           setRealData(data);
           setShowDemo(false);
         } else {
-          // Нет продаж — показываем демо с пометкой
-          setRealData(null);
+          // Нет продаж — показываем реальные данные (нулевые) с пометкой
+          setRealData(data);
           setShowDemo(true);
           setError({
-            message: 'Нет данных о продажах',
-            details: 'В вашем магазине пока нет продаж за выбранный период, или API-ключ не имеет доступа к разделу "Статистика".',
+            message: 'Продаж пока нет',
+            details: 'API подключен успешно! В вашем магазине пока нет продаж за последние 60 дней. Данные обновляются автоматически.',
             status: 200,
+            noSales: true,
           });
         }
       } catch (err: any) {
@@ -60,7 +61,8 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
     fetchSales();
   }, [user?.wbApiKey]);
 
-  const data = showDemo || !realData ? salesData[period] : realData[period];
+  // Если есть реальные данные (даже нулевые), используем их. Иначе - демо.
+  const data = realData ? realData[period] : salesData[period];
 
   const stats = [
     {
@@ -99,8 +101,8 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
 
   return (
     <div className="space-y-6">
-      {/* Demo Mode Banner */}
-      {showDemo && user?.wbApiKey && (
+      {/* Demo Mode Banner - показываем только если есть ошибка И это не "нет продаж" */}
+      {showDemo && user?.wbApiKey && error && !error.noSales && (
         <div className="bg-gradient-to-r from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4">
           <div className="flex items-start gap-3">
             <div className="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -252,7 +254,12 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
           <div className="flex items-center justify-between">
             <h2 className="text-2xl font-bold text-gray-800">
               Сводка продаж
-              {showDemo && <span className="text-sm font-normal text-amber-600 ml-2">(демо)</span>}
+              {showDemo && error && !error.noSales && (
+                <span className="text-sm font-normal text-amber-600 ml-2">(демо)</span>
+              )}
+              {error?.noSales && (
+                <span className="text-sm font-normal text-blue-600 ml-2">(ожидание продаж)</span>
+              )}
             </h2>
             <div className="flex bg-gray-100 rounded-xl p-1">
               {[
@@ -383,16 +390,34 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
           </div>
 
           {/* Info Card */}
-          {!showDemo && realData && (
-            <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-2xl p-6">
+          {realData && (
+            <div className={`border rounded-2xl p-6 ${
+              error?.noSales 
+                ? 'bg-gradient-to-r from-blue-50 to-cyan-50 border-blue-200' 
+                : 'bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200'
+            }`}>
               <div className="flex items-start gap-3">
-                <div className="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-                  <TrendingUp size={20} className="text-green-600" />
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
+                  error?.noSales ? 'bg-blue-100' : 'bg-green-100'
+                }`}>
+                  {error?.noSales ? (
+                    <Info size={20} className="text-blue-600" />
+                  ) : (
+                    <TrendingUp size={20} className="text-green-600" />
+                  )}
                 </div>
                 <div>
-                  <h4 className="font-semibold text-green-900 mb-1">✅ Реальные данные</h4>
-                  <p className="text-sm text-green-800">
-                    Данные загружены из вашего кабинета Wildberries и обновляются автоматически.
+                  <h4 className={`font-semibold mb-1 ${
+                    error?.noSales ? 'text-blue-900' : 'text-green-900'
+                  }`}>
+                    {error?.noSales ? 'ℹ️ API подключен' : '✅ Реальные данные'}
+                  </h4>
+                  <p className={`text-sm ${
+                    error?.noSales ? 'text-blue-800' : 'text-green-800'
+                  }`}>
+                    {error?.noSales 
+                      ? 'API подключен успешно! В вашем магазине пока нет продаж за последние 60 дней. Как только появятся продажи, они автоматически отобразятся здесь.'
+                      : 'Данные загружены из вашего кабинета Wildberries и обновляются автоматически.'}
                   </p>
                 </div>
               </div>
