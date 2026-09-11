@@ -2,7 +2,7 @@ import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Кэш в памяти серверной функции
 const cache = new Map();
-const CACHE_TTL = 10 * 60 * 1000; // 10 минут
+const CACHE_TTL = 20 * 60 * 1000; // 20 минут (увеличили для снижения нагрузки)
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
