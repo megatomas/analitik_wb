@@ -1,41 +1,48 @@
 import { useState, useRef } from 'react';
-import { Upload, Image as ImageIcon, Download, Loader2, Sparkles, CheckCircle2, AlertCircle, Camera, Wand2 } from 'lucide-react';
+import { Upload, Download, Loader2, Sparkles, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
 
-interface ProcessedImage {
-  original: string;
-  processed: string;
-  width: number;
-  height: number;
+interface Concept {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
 }
 
 export default function CardCreator() {
+  const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [processedImage, setProcessedImage] = useState<ProcessedImage | null>(null);
+  const [selectedConcept, setSelectedConcept] = useState<Concept | null>(null);
+  const [infographicData, setInfographicData] = useState({
+    title: '',
+    price: '',
+    features: '',
+    material: '',
+  });
   const [isProcessing, setIsProcessing] = useState(false);
+  const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [selectedBg, setSelectedBg] = useState<'white' | 'gradient' | 'custom'>('white');
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Требования WB к фото
-  const WB_REQUIREMENTS = {
-    minWidth: 900,
-    minHeight: 1200,
-    aspectRatio: 3 / 4, // 3:4
-    maxSizeMB: 10,
-    format: 'JPEG',
-  };
+  const concepts: Concept[] = [
+    { id: 'studio-white', name: 'Студийное фото', description: 'Каталожная съемка на белом фоне', icon: '📸' },
+    { id: 'studio-gradient', name: 'Студия с градиентом', description: 'Профессиональная съемка с градиентным фоном', icon: '🎨' },
+    { id: 'interior-living', name: 'В интерьере', description: 'Товар в домашней обстановке', icon: '🏠' },
+    { id: 'interior-office', name: 'В офисе', description: 'Товар в офисной обстановке', icon: '💼' },
+    { id: 'lifestyle-outdoor', name: 'На улице', description: 'Товар в городской среде', icon: '🌆' },
+    { id: 'lifestyle-nature', name: 'На природе', description: 'Товар на фоне природы', icon: '🌿' },
+    { id: 'composition-flatlay', name: 'Flatlay', description: 'Композиция сверху', icon: '📐' },
+    { id: 'composition-minimal', name: 'Минимализм', description: 'Минималистичная композиция', icon: '⚪' },
+  ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
-    // Проверка размера файла
-    if (file.size > WB_REQUIREMENTS.maxSizeMB * 1024 * 1024) {
-      setError(`Размер файла не должен превышать ${WB_REQUIREMENTS.maxSizeMB} МБ`);
+    if (file.size > 10 * 1024 * 1024) {
+      setError('Размер файла не должен превышать 10 МБ');
       return;
     }
 
-    // Проверка типа файла
     if (!file.type.startsWith('image/')) {
       setError('Пожалуйста, выберите изображение');
       return;
@@ -45,19 +52,21 @@ export default function CardCreator() {
     const reader = new FileReader();
     reader.onload = (e) => {
       setSelectedImage(e.target?.result as string);
-      setProcessedImage(null);
     };
     reader.readAsDataURL(file);
   };
 
   const processImage = async () => {
-    if (!selectedImage) return;
+    if (!selectedImage || !selectedConcept) return;
 
     setIsProcessing(true);
     setError(null);
 
     try {
-      // Создаем canvas для обработки изображения
+      // Имитация ИИ обработки (в реальности здесь будет API вызов)
+      await new Promise(resolve => setTimeout(resolve, 2000));
+
+      // Создаем canvas для обработки
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Не удалось создать canvas');
@@ -71,66 +80,68 @@ export default function CardCreator() {
         img.src = selectedImage;
       });
 
-      // Рассчитываем размеры для WB (3:4)
-      const targetWidth = WB_REQUIREMENTS.minWidth;
-      const targetHeight = WB_REQUIREMENTS.minHeight;
-      
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
+      // Размер для WB (3:4)
+      canvas.width = 900;
+      canvas.height = 1200;
 
-      // Заполняем фон
-      if (selectedBg === 'white') {
+      // Фон в зависимости от концепции
+      if (selectedConcept.id === 'studio-white') {
         ctx.fillStyle = '#FFFFFF';
-        ctx.fillRect(0, 0, targetWidth, targetHeight);
-      } else if (selectedBg === 'gradient') {
-        const gradient = ctx.createLinearGradient(0, 0, 0, targetHeight);
+        ctx.fillRect(0, 0, 900, 1200);
+      } else if (selectedConcept.id === 'studio-gradient') {
+        const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
         gradient.addColorStop(0, '#f8f9fa');
         gradient.addColorStop(1, '#e9ecef');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, targetWidth, targetHeight);
+        ctx.fillRect(0, 0, 900, 1200);
+      } else {
+        ctx.fillStyle = '#FFFFFF';
+        ctx.fillRect(0, 0, 900, 1200);
       }
 
-      // Рассчитываем масштабирование изображения
+      // Масштабируем изображение
       const imgAspectRatio = img.width / img.height;
-      const canvasAspectRatio = targetWidth / targetHeight;
+      const canvasAspectRatio = 900 / 1200;
       
       let drawWidth, drawHeight, drawX, drawY;
       
       if (imgAspectRatio > canvasAspectRatio) {
-        // Изображение шире - масштабируем по высоте
-        drawHeight = targetHeight * 0.85; // 85% высоты для отступов
+        drawHeight = 1200 * 0.85;
         drawWidth = drawHeight * imgAspectRatio;
-        drawX = (targetWidth - drawWidth) / 2;
-        drawY = (targetHeight - drawHeight) / 2;
+        drawX = (900 - drawWidth) / 2;
+        drawY = (1200 - drawHeight) / 2;
       } else {
-        // Изображение выше - масштабируем по ширине
-        drawWidth = targetWidth * 0.85; // 85% ширины для отступов
+        drawWidth = 900 * 0.85;
         drawHeight = drawWidth / imgAspectRatio;
-        drawX = (targetWidth - drawWidth) / 2;
-        drawY = (targetHeight - drawHeight) / 2;
+        drawX = (900 - drawWidth) / 2;
+        drawY = (1200 - drawHeight) / 2;
       }
 
-      // Рисуем изображение
       ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
-      // Имитация ИИ обработки (в реальном приложении здесь будет API вызов)
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Добавляем инфографику если есть данные
+      if (infographicData.title || infographicData.price) {
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        ctx.fillRect(0, 1050, 900, 150);
+        
+        ctx.fillStyle = '#FFFFFF';
+        ctx.font = 'bold 32px Arial';
+        ctx.textAlign = 'center';
+        
+        if (infographicData.title) {
+          ctx.fillText(infographicData.title, 450, 1090);
+        }
+        
+        if (infographicData.price) {
+          ctx.font = 'bold 40px Arial';
+          ctx.fillStyle = '#FFD700';
+          ctx.fillText(infographicData.price + ' ₽', 450, 1140);
+        }
+      }
 
-      // Добавляем легкие улучшения
-      ctx.filter = 'contrast(1.05) saturate(1.1)';
-      ctx.drawImage(canvas, 0, 0);
-      ctx.filter = 'none';
-
-      // Конвертируем в JPEG
       const processedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-
-      setProcessedImage({
-        original: selectedImage,
-        processed: processedDataUrl,
-        width: targetWidth,
-        height: targetHeight,
-      });
-
+      setProcessedImage(processedDataUrl);
+      setStep(4);
     } catch (err: any) {
       setError('Ошибка при обработке изображения: ' + err.message);
     } finally {
@@ -140,15 +151,17 @@ export default function CardCreator() {
 
   const downloadImage = () => {
     if (!processedImage) return;
-
     const link = document.createElement('a');
     link.download = `wb-card-${Date.now()}.jpg`;
-    link.href = processedImage.processed;
+    link.href = processedImage;
     link.click();
   };
 
-  const resetImage = () => {
+  const resetAll = () => {
+    setStep(1);
     setSelectedImage(null);
+    setSelectedConcept(null);
+    setInfographicData({ title: '', price: '', features: '', material: '' });
     setProcessedImage(null);
     setError(null);
     if (fileInputRef.current) {
@@ -157,232 +170,254 @@ export default function CardCreator() {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6">
+    <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
-      <div>
-        <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-          <Camera size={28} className="text-purple-600" />
-          Создание карточки товара
-        </h2>
-        <p className="text-gray-500 mt-1">
-          Загрузите фото товара, и мы создадим продающую карточку по требованиям Wildberries
-        </p>
+      <div className="mb-8">
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Создание карточки товара</h1>
+        <p className="text-gray-600">Создайте профессиональную карточку товара с помощью ИИ за 3 шага</p>
       </div>
 
-      {/* Requirements Info */}
-      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <ImageIcon size={20} className="text-blue-600" />
-          </div>
-          <div>
-            <h4 className="font-semibold text-blue-900 mb-1">Требования WB к фото</h4>
-            <ul className="text-sm text-blue-800 space-y-1">
-              <li>• Минимальный размер: {WB_REQUIREMENTS.minWidth}x{WB_REQUIREMENTS.minHeight} пикселей</li>
-              <li>• Соотношение сторон: 3:4</li>
-              <li>• Формат: JPEG</li>
-              <li>• Максимальный размер: {WB_REQUIREMENTS.maxSizeMB} МБ</li>
-              <li>• Рекомендуется белый фон</li>
-            </ul>
-          </div>
+      {/* Progress Steps */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          {[1, 2, 3, 4].map((s) => (
+            <div key={s} className="flex items-center">
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
+                step >= s ? 'bg-purple-600 text-white' : 'bg-gray-200 text-gray-500'
+              }`}>
+                {step > s ? <CheckCircle2 size={20} /> : s}
+              </div>
+              {s < 4 && (
+                <div className={`w-20 h-1 mx-2 ${step > s ? 'bg-purple-600' : 'bg-gray-200'}`} />
+              )}
+            </div>
+          ))}
+        </div>
+        <div className="flex justify-between mt-2 text-sm text-gray-600">
+          <span>Загрузка</span>
+          <span>Концепция</span>
+          <span>Инфографика</span>
+          <span>Результат</span>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Left Column - Upload */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <Upload size={20} className="text-purple-600" />
-              Загрузка фото
-            </h3>
+      {/* Step 1: Upload */}
+      {step === 1 && (
+        <div className="bg-white rounded-xl p-8 border border-gray-200">
+          <h2 className="text-2xl font-bold mb-4">Шаг 1: Загрузите фото товара</h2>
+          <p className="text-gray-600 mb-6">Подойдет обычное фото с телефона</p>
 
-            {!selectedImage ? (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-purple-400 hover:bg-purple-50 transition-all"
-              >
-                <Upload size={48} className="mx-auto text-gray-400 mb-4" />
-                <p className="text-gray-600 font-medium mb-2">
-                  Нажмите для загрузки фото
-                </p>
-                <p className="text-sm text-gray-500">
-                  или перетащите файл сюда
-                </p>
-                <p className="text-xs text-gray-400 mt-2">
-                  JPG, PNG до {WB_REQUIREMENTS.maxSizeMB} МБ
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="relative">
-                  <img
-                    src={selectedImage}
-                    alt="Original"
-                    className="w-full h-auto rounded-xl border border-gray-200"
-                  />
-                  <button
-                    onClick={resetImage}
-                    className="absolute top-2 right-2 bg-red-500 text-white p-2 rounded-lg hover:bg-red-600 transition-colors"
-                  >
-                    ×
-                  </button>
-                </div>
-
-                {/* Background Selection */}
-                <div>
-                  <label className="text-sm font-medium text-gray-700 mb-2 block">
-                    Фон карточки
-                  </label>
-                  <div className="grid grid-cols-3 gap-2">
-                    <button
-                      onClick={() => setSelectedBg('white')}
-                      className={`p-3 rounded-xl border-2 transition-all ${
-                        selectedBg === 'white'
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="w-full h-16 bg-white rounded-lg border border-gray-200"></div>
-                      <p className="text-xs text-center mt-1">Белый</p>
-                    </button>
-                    <button
-                      onClick={() => setSelectedBg('gradient')}
-                      className={`p-3 rounded-xl border-2 transition-all ${
-                        selectedBg === 'gradient'
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="w-full h-16 bg-gradient-to-b from-gray-100 to-gray-200 rounded-lg"></div>
-                      <p className="text-xs text-center mt-1">Градиент</p>
-                    </button>
-                    <button
-                      onClick={() => setSelectedBg('custom')}
-                      className={`p-3 rounded-xl border-2 transition-all ${
-                        selectedBg === 'custom'
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <div className="w-full h-16 bg-gradient-to-br from-purple-100 to-pink-100 rounded-lg"></div>
-                      <p className="text-xs text-center mt-1">Скоро</p>
-                    </button>
-                  </div>
-                </div>
-
+          {!selectedImage ? (
+            <div
+              onClick={() => fileInputRef.current?.click()}
+              className="border-2 border-dashed border-gray-300 rounded-xl p-12 text-center cursor-pointer hover:border-purple-500 hover:bg-purple-50 transition-all"
+            >
+              <Upload size={48} className="mx-auto text-gray-400 mb-4" />
+              <p className="text-lg font-medium text-gray-700 mb-2">Нажмите для загрузки фото</p>
+              <p className="text-sm text-gray-500">или перетащите файл сюда</p>
+              <p className="text-xs text-gray-400 mt-2">JPG, PNG до 10 МБ</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              <img src={selectedImage} alt="Selected" className="w-full max-w-md mx-auto rounded-xl" />
+              <div className="flex gap-4">
                 <button
-                  onClick={processImage}
-                  disabled={isProcessing}
-                  className="w-full py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-xl font-medium hover:opacity-90 transition-opacity disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={() => setSelectedImage(null)}
+                  className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
-                  {isProcessing ? (
-                    <>
-                      <Loader2 size={20} className="animate-spin" />
-                      Обработка...
-                    </>
-                  ) : (
-                    <>
-                      <Wand2 size={20} />
-                      Создать карточку с ИИ
-                    </>
-                  )}
+                  Изменить фото
+                </button>
+                <button
+                  onClick={() => setStep(2)}
+                  className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+                >
+                  Далее <ArrowRight size={20} />
                 </button>
               </div>
-            )}
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              onChange={handleFileSelect}
-              className="hidden"
-            />
-          </div>
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-start gap-3">
-              <AlertCircle size={20} className="text-red-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-red-800">{error}</p>
             </div>
           )}
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept="image/*"
+            onChange={handleFileSelect}
+            className="hidden"
+          />
         </div>
+      )}
 
-        {/* Right Column - Result */}
-        <div className="space-y-4">
-          <div className="bg-white rounded-2xl border border-gray-200 p-6">
-            <h3 className="font-semibold text-gray-800 mb-4 flex items-center gap-2">
-              <Sparkles size={20} className="text-purple-600" />
-              Результат
-            </h3>
+      {/* Step 2: Concept */}
+      {step === 2 && (
+        <div className="bg-white rounded-xl p-8 border border-gray-200">
+          <h2 className="text-2xl font-bold mb-4">Шаг 2: Выберите концепцию</h2>
+          <p className="text-gray-600 mb-6">ИИ создаст профессиональное фото в выбранном стиле</p>
 
-            {!processedImage ? (
-              <div className="border-2 border-dashed border-gray-200 rounded-xl p-12 text-center">
-                <ImageIcon size={48} className="mx-auto text-gray-300 mb-4" />
-                <p className="text-gray-500">
-                  Здесь появится готовая карточка
-                </p>
-                <p className="text-sm text-gray-400 mt-2">
-                  Загрузите фото и нажмите "Создать карточку"
-                </p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="relative">
-                  <img
-                    src={processedImage.processed}
-                    alt="Processed"
-                    className="w-full h-auto rounded-xl border border-gray-200"
-                  />
-                  <div className="absolute top-2 left-2 bg-green-500 text-white px-3 py-1 rounded-lg text-xs font-medium flex items-center gap-1">
-                    <CheckCircle2 size={14} />
-                    Готово
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 rounded-xl p-4">
-                  <h4 className="text-sm font-medium text-gray-700 mb-2">Информация:</h4>
-                  <div className="space-y-1 text-xs text-gray-600">
-                    <p>• Размер: {processedImage.width}x{processedImage.height} пикселей</p>
-                    <p>• Соотношение: 3:4 (требование WB)</p>
-                    <p>• Формат: JPEG</p>
-                    <p>• Готово к загрузке на WB</p>
-                  </div>
-                </div>
-
-                <button
-                  onClick={downloadImage}
-                  className="w-full py-3 bg-gradient-to-r from-green-600 to-emerald-600 text-white rounded-xl font-medium hover:opacity-90 transition-opacity flex items-center justify-center gap-2"
-                >
-                  <Download size={20} />
-                  Скачать карточку
-                </button>
-
-                <button
-                  onClick={resetImage}
-                  className="w-full py-2 text-sm text-gray-600 hover:text-gray-800 transition-colors"
-                >
-                  Создать другую карточку
-                </button>
-              </div>
-            )}
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            {concepts.map((concept) => (
+              <button
+                key={concept.id}
+                onClick={() => setSelectedConcept(concept)}
+                className={`p-4 rounded-xl border-2 transition-all ${
+                  selectedConcept?.id === concept.id
+                    ? 'border-purple-600 bg-purple-50'
+                    : 'border-gray-200 hover:border-purple-300'
+                }`}
+              >
+                <div className="text-4xl mb-2">{concept.icon}</div>
+                <h3 className="font-semibold text-sm mb-1">{concept.name}</h3>
+                <p className="text-xs text-gray-500">{concept.description}</p>
+              </button>
+            ))}
           </div>
 
-          {/* Tips */}
-          <div className="bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-2xl p-4">
-            <h4 className="font-semibold text-purple-900 mb-2 flex items-center gap-2">
-              <Sparkles size={18} className="text-purple-600" />
-              Советы по созданию карточек
-            </h4>
-            <ul className="text-sm text-purple-800 space-y-1">
-              <li>• Используйте качественное фото товара</li>
-              <li>• Товар должен занимать 70-85% кадра</li>
-              <li>• Белый фон увеличивает конверсию</li>
-              <li>• Избегайте теней и бликов</li>
-              <li>• Фото должно быть четким и ярким</li>
-            </ul>
+          <div className="flex gap-4">
+            <button
+              onClick={() => setStep(1)}
+              className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+            >
+              <ArrowLeft size={20} /> Назад
+            </button>
+            <button
+              onClick={() => setStep(3)}
+              disabled={!selectedConcept}
+              className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              Далее <ArrowRight size={20} />
+            </button>
           </div>
         </div>
+      )}
+
+      {/* Step 3: Infographic */}
+      {step === 3 && (
+        <div className="bg-white rounded-xl p-8 border border-gray-200">
+          <h2 className="text-2xl font-bold mb-4">Шаг 3: Добавьте инфографику</h2>
+          <p className="text-gray-600 mb-6">Укажите характеристики товара (необязательно)</p>
+
+          <div className="space-y-4 mb-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Название товара</label>
+              <input
+                type="text"
+                value={infographicData.title}
+                onChange={(e) => setInfographicData({ ...infographicData, title: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Например: Кроссовки Nike Air Max"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Цена</label>
+              <input
+                type="text"
+                value={infographicData.price}
+                onChange={(e) => setInfographicData({ ...infographicData, price: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Например: 5990"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Особенности</label>
+              <textarea
+                value={infographicData.features}
+                onChange={(e) => setInfographicData({ ...infographicData, features: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Например: Натуральная кожа, амортизация"
+                rows={3}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Материал</label>
+              <input
+                type="text"
+                value={infographicData.material}
+                onChange={(e) => setInfographicData({ ...infographicData, material: e.target.value })}
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Например: 100% хлопок"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={() => setStep(2)}
+              className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center justify-center gap-2"
+            >
+              <ArrowLeft size={20} /> Назад
+            </button>
+            <button
+              onClick={processImage}
+              disabled={isProcessing}
+              className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isProcessing ? (
+                <>
+                  <Loader2 size={20} className="animate-spin" /> Обработка...
+                </>
+              ) : (
+                <>
+                  <Sparkles size={20} /> Создать карточку
+                </>
+              )}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Step 4: Result */}
+      {step === 4 && processedImage && (
+        <div className="bg-white rounded-xl p-8 border border-gray-200">
+          <h2 className="text-2xl font-bold mb-4">Готово!</h2>
+          <p className="text-gray-600 mb-6">Ваша карточка готова к загрузке на Wildberries</p>
+
+          <img src={processedImage} alt="Result" className="w-full max-w-md mx-auto rounded-xl mb-6" />
+
+          <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
+            <div className="flex items-start gap-3">
+              <CheckCircle2 size={20} className="text-green-600 mt-0.5" />
+              <div>
+                <p className="font-semibold text-green-900 mb-1">Карточка готова!</p>
+                <p className="text-sm text-green-800">
+                  Размер: 900x1200 px (3:4) • Формат: JPEG • Готово к загрузке на WB
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex gap-4">
+            <button
+              onClick={resetAll}
+              className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
+            >
+              Создать другую карточку
+            </button>
+            <button
+              onClick={downloadImage}
+              className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center justify-center gap-2"
+            >
+              <Download size={20} /> Скачать карточку
+            </button>
+          </div>
+        </div>
+      )}
+
+      {error && (
+        <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-start gap-3">
+            <AlertCircle size={20} className="text-red-600 mt-0.5" />
+            <p className="text-sm text-red-800">{error}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Info */}
+      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
+        <p className="text-sm text-blue-800">
+          <strong>💡 Совет:</strong> Для создания карточек как в Aidentika.com с полноценной ИИ генерацией 
+          (удаление фона, генерация окружения) необходимо подключить API генеративного ИИ 
+          (например, OpenAI DALL-E, Stability AI или Midjourney API). 
+          Текущая версия использует базовую обработку через Canvas API.
+        </p>
       </div>
     </div>
   );
