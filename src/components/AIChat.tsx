@@ -48,7 +48,10 @@ export default function AIChat() {
         const week = salesData.week;
         const month = salesData.month;
 
-        return `📊 **Сводка продаж из вашего кабинета WB:**\n\n` +
+        // Получаем топ-5 товаров за месяц
+        const topProducts = salesData.topProducts?.slice(0, 5) || [];
+
+        let response = `📊 **Сводка продаж из вашего кабинета WB:**\n\n` +
           `**Вчера:**\n` +
           `• Выручка: ${yesterday.revenue.toLocaleString('ru-RU')} ₽\n` +
           `• Заказов: ${yesterday.orders}\n` +
@@ -61,8 +64,18 @@ export default function AIChat() {
           `**За месяц:**\n` +
           `• Выручка: ${month.revenue.toLocaleString('ru-RU')} ₽\n` +
           `• Заказов: ${month.orders}\n` +
-          `• Средний чек: ${month.avgCheck.toLocaleString('ru-RU')} ₽\n\n` +
-          `💡 Данные получены из вашего кабинета Wildberries в реальном времени.`;
+          `• Средний чек: ${month.avgCheck.toLocaleString('ru-RU')} ₽\n\n`;
+
+        if (topProducts.length > 0) {
+          response += `**🏆 Топ-5 товаров за месяц:**\n`;
+          topProducts.forEach((product: any, index: number) => {
+            response += `${index + 1}. Артикул ${product.nmId} - ${product.orders} заказов (${product.revenue.toLocaleString('ru-RU')} ₽)\n`;
+          });
+          response += `\n`;
+        }
+
+        response += `💡 Данные получены из вашего кабинета Wildberries в реальном времени.`;
+        return response;
       }
 
       // Запрос об остатках
@@ -103,22 +116,27 @@ export default function AIChat() {
 
       // Прогноз
       if (lowerQuery.includes('прогноз') || lowerQuery.includes('будет') || lowerQuery.includes('ожид')) {
-        const salesData = await getSales();
-        const month = salesData.month;
-        const week = salesData.week;
+        try {
+          const salesData = await getSales();
+          const month = salesData.month;
 
-        // Простой прогноз на основе средних значений
-        const avgDailyRevenue = month.revenue / 30;
-        const avgDailyOrders = month.orders / 30;
-        const forecastRevenue = Math.round(avgDailyRevenue * 7);
-        const forecastOrders = Math.round(avgDailyOrders * 7);
+          // Простой прогноз на основе средних значений
+          const avgDailyRevenue = month.revenue / 30;
+          const avgDailyOrders = month.orders / 30;
+          const forecastRevenue = Math.round(avgDailyRevenue * 7);
+          const forecastOrders = Math.round(avgDailyOrders * 7);
 
-        return `🔮 **Прогноз на следующую неделю:**\n\n` +
-          `На основе данных из вашего кабинета WB:\n\n` +
-          `• Ожидаемая выручка: ${forecastRevenue.toLocaleString('ru-RU')} ₽\n` +
-          `• Ожидаемые заказы: ${forecastOrders}\n` +
-          `• Средний дневной доход: ${Math.round(avgDailyRevenue).toLocaleString('ru-RU')} ₽\n\n` +
-          `💡 Прогноз основан на данных за последний месяц из вашего кабинета Wildberries.`;
+          return `🔮 **Прогноз на следующую неделю:**\n\n` +
+            `На основе данных из вашего кабинета WB:\n\n` +
+            `• Ожидаемая выручка: ${forecastRevenue.toLocaleString('ru-RU')} ₽\n` +
+            `• Ожидаемые заказы: ${forecastOrders}\n` +
+            `• Средний дневной доход: ${Math.round(avgDailyRevenue).toLocaleString('ru-RU')} ₽\n\n` +
+            `💡 Прогноз основан на данных за последний месяц из вашего кабинета Wildberries.`;
+        } catch (error) {
+          return `🔮 **Прогноз на следующую неделю:**\n\n` +
+            `Не удалось получить данные для прогноза. Проверьте подключение API-ключа.\n\n` +
+            `💡 Прогноз рассчитывается на основе данных за последний месяц.`;
+        }
       }
 
       // По умолчанию
