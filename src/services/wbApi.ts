@@ -1,10 +1,8 @@
 import { useAuth } from '../contexts/AuthContext';
 
-// Базовый URL для API (в продакшне это будет ваш Vercel backend)
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const API_BASE_URL = '/api';
 
-interface SalesData {
-  date: string;
+export interface SalesData {
   revenue: number;
   orders: number;
   avgCheck: number;
@@ -12,7 +10,13 @@ interface SalesData {
   conversion: number;
 }
 
-interface StockItem {
+export interface SalesResponse {
+  yesterday: SalesData;
+  week: SalesData;
+  month: SalesData;
+}
+
+export interface StockRecommendation {
   productId: number;
   productName: string;
   currentStock: number;
@@ -23,64 +27,65 @@ interface StockItem {
   reason: string;
 }
 
+export interface ApiError {
+  message: string;
+  details?: string;
+  status?: number;
+}
+
 export function useWBApi() {
   const { user } = useAuth();
 
-  const fetchWithAuth = async (endpoint: string) => {
+  const fetchWithAuth = async (endpoint: string): Promise<any> => {
     if (!user?.wbApiKey) {
-      throw new Error('API ключ не настроен');
+      throw { message: 'API ключ не настроен' };
     }
 
-    const response = await fetch(`${API_BASE_URL}${endpoint}`, {
-      headers: {
-        'Authorization': `Bearer ${user.wbApiKey}`,
-        'Content-Type': 'application/json',
-      },
-    });
+    try {
+      const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        headers: {
+          'Authorization': `Bearer ${user.wbApiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
-    if (!response.ok) {
-      throw new Error(`Ошибка API: ${response.status}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        let errorDetails = '';
+        try {
+          const errorJson = JSON.parse(errorText);
+          errorDetails = errorJson.error || errorJson.details || errorText;
+        } catch {
+          errorDetails = errorText;
+        }
+
+        throw {
+          message: `Ошибка API: ${response.status}`,
+          details: errorDetails,
+          status: response.status,
+        };
+      }
+
+      return response.json();
+    } catch (error: any) {
+      if (error.message) throw error;
+      throw {
+        message: 'Не удалось подключиться к серверу',
+        details: error.message || 'Проверьте подключение к интернету',
+      };
     }
-
-    return response.json();
   };
 
-  // Получить продажи за период
-  const getSales = async (days: number = 1): Promise<SalesData> => {
-    try {
-      const data = await fetchWithAuth(`/wb-sales?days=${days}`);
-      return data;
-    } catch (error) {
-      console.error('Ошибка получения продаж:', error);
-      throw error;
-    }
+  const getSales = async (): Promise<SalesResponse> => {
+    return fetchWithAuth('/wb-sales');
   };
 
-  // Получить остатки и рекомендации
-  const getStockRecommendations = async (): Promise<StockItem[]> => {
-    try {
-      const data = await fetchWithAuth('/wb-stocks');
-      return data;
-    } catch (error) {
-      console.error('Ошибка получения остатков:', error);
-      throw error;
-    }
-  };
-
-  // Получить аналитику
-  const getAnalytics = async () => {
-    try {
-      const data = await fetchWithAuth('/wb-analytics');
-      return data;
-    } catch (error) {
-      console.error('Ошибка получения аналитики:', error);
-      throw error;
-    }
+  const getStockRecommendations = async (): Promise<StockRecommendation[]> => {
+    return fetchWithAuth('/wb-stocks');
   };
 
   return {
     getSales,
     getStockRecommendations,
-    getAnalytics,
   };
 }
