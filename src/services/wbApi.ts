@@ -67,8 +67,10 @@ export function useWBApi() {
     console.log(`[WB API] Запрос: ${endpoint}`);
 
     try {
-      // Пытаемся через наш серверный прокси (Vercel Functions)
-      const response = await fetch(`/api/wb-proxy?endpoint=${encodeURIComponent(endpoint)}`, {
+      // Используем Cloudflare Worker как прокси
+      const workerUrl = 'https://quiet-sound-ccaf.wpehack.workers.dev';
+      
+      const response = await fetch(`${workerUrl}?endpoint=${encodeURIComponent(endpoint)}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${user.wbApiKey}`,
