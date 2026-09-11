@@ -13,6 +13,7 @@ import {
   ChevronRight,
   TrendingUp,
   Rocket,
+  Camera,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const menuItems = [
   { id: 'stock', icon: Package, label: 'Остатки' },
   { id: 'ai', icon: Bot, label: 'ИИ Аналитик' },
   { id: 'analytics', icon: BarChart3, label: 'Аналитика' },
+  { id: 'card-creator', icon: Camera, label: 'Создание карточек' },
   { id: 'platforms', icon: Globe, label: 'Платформы' },
   { id: 'deploy', icon: Rocket, label: 'Деплой' },
 ];
