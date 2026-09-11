@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { AuthProvider, useAuth } from './contexts/AuthContext';
 import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import StockRecommendations from './components/StockRecommendations';
@@ -6,15 +7,47 @@ import AIChat from './components/AIChat';
 import Analytics from './components/Analytics';
 import Platforms from './components/Platforms';
 import VercelDeploy from './components/VercelDeploy';
-import { Bell, Search, Menu, X } from 'lucide-react';
+import AuthPage from './components/AuthPage';
+import ApiSetup from './components/ApiSetup';
+import SaasGuide from './components/SaasGuide';
+import { Bell, Search, Menu, X, LogOut, Key } from 'lucide-react';
 import { notifications } from './data/mockData';
 
-export default function App() {
+function AppContent() {
+  const { user, isLoading, isAuthenticated, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('dashboard');
   const [collapsed, setCollapsed] = useState(false);
   const [period, setPeriod] = useState<'yesterday' | 'week' | 'month'>('yesterday');
   const [showNotifications, setShowNotifications] = useState(false);
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [apiSetupComplete, setApiSetupComplete] = useState(false);
+
+  // Загрузка
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="w-12 h-12 border-4 border-purple-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-500">Загрузка...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Не авторизован — показываем страницу входа
+  if (!isAuthenticated) {
+    return <AuthPage />;
+  }
+
+  // Авторизован, но нет API-ключа — показываем настройку
+  if (!user?.wbApiKey && !apiSetupComplete) {
+    return (
+      <ApiSetup
+        onComplete={() => setApiSetupComplete(true)}
+        onSkip={() => setApiSetupComplete(true)}
+      />
+    );
+  }
 
   const renderContent = () => {
     switch (activeTab) {
@@ -30,6 +63,8 @@ export default function App() {
         return <Platforms />;
       case 'deploy':
         return <VercelDeploy />;
+      case 'saas':
+        return <SaasGuide />;
       default:
         return <Dashboard period={period} setPeriod={setPeriod} />;
     }
@@ -103,6 +138,19 @@ export default function App() {
           </div>
 
           <div className="flex items-center gap-3">
+            {/* Connection Status */}
+            {user?.wbApiKey ? (
+              <div className="hidden md:flex items-center gap-2 bg-green-50 border border-green-200 px-3 py-1.5 rounded-lg">
+                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+                <span className="text-xs font-medium text-green-700">WB API подключён</span>
+              </div>
+            ) : (
+              <div className="hidden md:flex items-center gap-2 bg-amber-50 border border-amber-200 px-3 py-1.5 rounded-lg">
+                <Key size={12} className="text-amber-600" />
+                <span className="text-xs font-medium text-amber-700">Демо-режим</span>
+              </div>
+            )}
+
             {/* Notifications */}
             <div className="relative">
               <button
@@ -138,12 +186,21 @@ export default function App() {
             {/* User */}
             <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
               <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">WB</span>
+                <span className="text-white text-xs font-bold">
+                  {user?.name?.charAt(0).toUpperCase() || 'U'}
+                </span>
               </div>
               <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-700">Продавец</p>
-                <p className="text-[10px] text-gray-400">Free Plan</p>
+                <p className="text-sm font-medium text-gray-700">{user?.name || 'Пользователь'}</p>
+                <p className="text-[10px] text-gray-400">{user?.email}</p>
               </div>
+              <button
+                onClick={logout}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Выйти"
+              >
+                <LogOut size={16} className="text-gray-400" />
+              </button>
             </div>
           </div>
         </header>
@@ -154,5 +211,13 @@ export default function App() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
