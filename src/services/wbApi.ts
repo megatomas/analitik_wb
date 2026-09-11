@@ -2,7 +2,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 // Кэш в памяти браузера
 const memoryCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+const CACHE_TTL = 15 * 60 * 1000; // 15 минут (увеличили для снижения нагрузки)
 
 // Правильные URL для WB API
 const WB_API = {
@@ -307,33 +307,41 @@ export function useWBApi() {
       return cached;
     }
 
-    // Получаем остатки и заказы параллельно
+    // Получаем остатки и заказы последовательно (чтобы не превысить лимит)
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() - 30);
     const dateTo = new Date();
     
-    const [stocksWB, stocksSeller, ordersResponse] = await Promise.all([
-      getStocksWB(),
-      getStocksSeller(),
-      fetchViaProxy(
-        'POST',
-        WB_API.orderFeed,
-        {
-          selectedPeriod: {
-            start: dateFrom.toISOString(),
-            end: dateTo.toISOString(),
-          },
-          nmIds: [],
-          subjectIds: [],
-          brandNames: [],
-          tagIds: [],
-          pagination: {
-            offset: 0,
-            limit: 1000,
-          },
-        }
-      ),
-    ]);
+    // Задержка между запросами (2 секунды)
+    const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+    
+    // 1. Получаем остатки на складах WB
+    const stocksWB = await getStocksWB();
+    await delay(2000); // Ждём 2 секунды
+    
+    // 2. Получаем остатки на складах продавца
+    const stocksSeller = await getStocksSeller();
+    await delay(2000); // Ждём 2 секунды
+    
+    // 3. Получаем заказы
+    const ordersResponse = await fetchViaProxy(
+      'POST',
+      WB_API.orderFeed,
+      {
+        selectedPeriod: {
+          start: dateFrom.toISOString(),
+          end: dateTo.toISOString(),
+        },
+        nmIds: [],
+        subjectIds: [],
+        brandNames: [],
+        tagIds: [],
+        pagination: {
+          offset: 0,
+          limit: 1000,
+        },
+      }
+    );
     
     // Order Feed возвращает { data: { orders: [...] } }
     const orders = ordersResponse?.data?.orders || [];
