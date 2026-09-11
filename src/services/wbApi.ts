@@ -70,11 +70,11 @@ export function useWBApi() {
       // Используем Cloudflare Worker как прокси
       const workerUrl = 'https://quiet-sound-ccaf.wpehack.workers.dev';
       
+      // Убираем Content-Type чтобы избежать preflight запроса
       const response = await fetch(`${workerUrl}?endpoint=${encodeURIComponent(endpoint)}`, {
         method: 'GET',
         headers: {
-          'Authorization': `Bearer ${user.wbApiKey}`,
-          'Content-Type': 'application/json',
+          'Authorization': user.wbApiKey, // Убираем "Bearer " префикс
         },
       });
 
