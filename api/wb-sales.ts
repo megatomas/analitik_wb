@@ -1,5 +1,9 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Простое кэширование в памяти
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
+
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS headers
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -17,6 +21,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   if (!apiKey) {
     console.log('[wb-sales] API ключ не предоставлен');
     return res.status(401).json({ error: 'API ключ не предоставлен' });
+  }
+
+  // Проверяем кэш
+  const cacheKey = `sales_${apiKey.substring(0, 20)}`;
+  const cached = cache.get(cacheKey);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log('[wb-sales] Возвращаем из кэша');
+    return res.status(200).json(cached.data);
   }
 
   try {
@@ -41,6 +53,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     if (!response.ok) {
       const errorText = await response.text();
       console.error('[wb-sales] Ошибка WB API:', errorText);
+      
+      // Обработка ошибки 429 (Too Many Requests)
+      if (response.status === 429) {
+        return res.status(429).json({ 
+          error: 'Превышен лимит запросов к WB API',
+          details: 'Wildberries ограничивает количество запросов. Подождите 1-2 минуты и попробуйте снова.',
+          status: 429,
+          retryAfter: 60 // секунд
+        });
+      }
+      
       return res.status(response.status).json({ 
         error: 'Ошибка WB API',
         details: errorText,
@@ -89,7 +112,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       month: calculateMetrics(sales),
     };
 
-    console.log('[wb-sales] Успешно возвращаем данные');
+    // Сохраняем в кэш
+    cache.set(cacheKey, { data: result, timestamp: Date.now() });
+    console.log('[wb-sales] Успешно возвращаем данные и сохраняем в кэш');
     return res.status(200).json(result);
   } catch (error: any) {
     console.error('[wb-sales] Критическая ошибка:', error);

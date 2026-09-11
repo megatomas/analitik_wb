@@ -120,16 +120,35 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
                       <div className="text-xs text-gray-600 space-y-1 mt-2 border-t border-amber-200 pt-2">
                         <p><strong>Возможные причины:</strong></p>
                         <ul className="list-disc pl-4 space-y-0.5">
-                          <li>Серверные функции ещё не развернулись на Vercel (подождите 2-3 минуты после push)</li>
-                          <li>API-ключ недействителен или отозван</li>
-                          <li>У ключа нет прав на "Статистику" или "Товары"</li>
-                          <li>Wildberries API временно недоступен</li>
+                          {error.status === 429 ? (
+                            <>
+                              <li>Превышен лимит запросов к WB API (10 запросов/мин)</li>
+                              <li>Слишком частые обновления страницы</li>
+                            </>
+                          ) : (
+                            <>
+                              <li>Серверные функции ещё не развернулись на Vercel</li>
+                              <li>API-ключ недействителен или отозван</li>
+                              <li>У ключа нет прав на "Статистика" или "Аналитика"</li>
+                              <li>Wildberries API временно недоступен</li>
+                            </>
+                          )}
                         </ul>
                         <p className="mt-2"><strong>Решение:</strong></p>
                         <ul className="list-disc pl-4 space-y-0.5">
-                          <li>Убедитесь что запушили изменения на GitHub: <code className="bg-gray-100 px-1 rounded">git push</code></li>
-                          <li>Проверьте логи в Vercel Dashboard → Functions</li>
-                          <li>Проверьте права API-ключа в кабинете WB</li>
+                          {error.status === 429 ? (
+                            <>
+                              <li>Подождите 1-2 минуты</li>
+                              <li>Обновите страницу (данные кэшируются на 5 минут)</li>
+                              <li>Не обновляйте страницу слишком часто</li>
+                            </>
+                          ) : (
+                            <>
+                              <li>Убедитесь что запушили изменения на GitHub: <code className="bg-gray-100 px-1 rounded">git push</code></li>
+                              <li>Проверьте логи в Vercel Dashboard → Functions</li>
+                              <li>Проверьте права API-ключа в кабинете WB (нужны: Статистика + Аналитика)</li>
+                            </>
+                          )}
                         </ul>
                       </div>
                     </div>
