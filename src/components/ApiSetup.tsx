@@ -229,10 +229,18 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
                 <p className="text-sm font-medium text-green-900 mb-2">📊 Категории данных (отметьте галочками):</p>
                 <div className="space-y-2">
                   {[
-                    { name: 'Статистика', required: true, desc: 'Данные о продажах, заказах, браках' },
-                    { name: 'Товары', required: true, desc: 'Информация об остатках на складах' },
+                    { name: 'Статистика', required: true, desc: 'Данные о продажах, заказах, остатках' },
+                    { name: 'Аналитика', required: true, desc: 'Расширенная аналитика и отчёты' },
                     { name: 'Контент', required: false, desc: 'Данные карточек товаров (опционально)' },
-                    { name: 'Аналитика', required: false, desc: 'Расширенная аналитика (если доступна)' },
+                    { name: 'Маркетплейс', required: false, desc: 'Общая информация маркетплейса' },
+                    { name: 'Финансы', required: false, desc: 'Финансовые операции и отчёты' },
+                    { name: 'Продвижение', required: false, desc: 'Реклама и продвижение товаров' },
+                    { name: 'Вопросы и отзывы', required: false, desc: 'Отзывы покупателей и вопросы' },
+                    { name: 'Цены и скидки', required: false, desc: 'Управление ценами и скидками' },
+                    { name: 'Поставки', required: false, desc: 'Информация о поставках' },
+                    { name: 'Возвраты', required: false, desc: 'Данные о возвратах' },
+                    { name: 'Документы', required: false, desc: 'Документооборот' },
+                    { name: 'Чат с покупателем', required: false, desc: 'Переписка с покупателями' },
                   ].map((cat) => (
                     <div key={cat.name} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-green-100">
                       <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${

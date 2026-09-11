@@ -267,10 +267,28 @@ export default function ProfileSettings() {
         <ol className="text-sm text-blue-800 space-y-2 list-decimal list-inside">
           <li>Войдите в <a href="https://seller.wildberries.ru" target="_blank" rel="noreferrer" className="underline">кабинет WB</a></li>
           <li>Перейдите в Настройки → Доступ к API</li>
-          <li>Создайте новый токен с правами: <strong>Статистика</strong> + <strong>Товары</strong></li>
+          <li>Создайте новый токен с правами: <strong>Статистика</strong> + <strong>Аналитика</strong></li>
           <li>Скопируйте ключ и вставьте в поле выше</li>
           <li>Нажмите "Обновить ключ"</li>
         </ol>
+      </div>
+
+      {/* Rate Limit Info */}
+      <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6">
+        <h4 className="font-semibold text-amber-900 mb-3 flex items-center gap-2">
+          <AlertTriangle size={18} className="text-amber-600" />
+          Лимиты запросов WB API
+        </h4>
+        <div className="text-sm text-amber-800 space-y-2">
+          <p>Wildberries ограничивает количество запросов к API:</p>
+          <ul className="list-disc list-inside space-y-1 ml-2">
+            <li>Не более <strong>10 запросов в минуту</strong></li>
+            <li>Не более <strong>100 запросов в час</strong></li>
+          </ul>
+          <p className="mt-2">
+            <strong>Решение:</strong> Данные кэшируются на 5 минут. Если видите ошибку 429, подождите 1-2 минуты и обновите страницу.
+          </p>
+        </div>
       </div>
 
       {/* Logout */}
