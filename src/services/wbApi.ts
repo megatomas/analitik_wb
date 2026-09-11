@@ -67,30 +67,16 @@ export function useWBApi() {
     console.log(`[WB API] Запрос: ${endpoint}`);
 
     try {
-      // PWA: прямые запросы к WB API (с устройства пользователя)
-      // Vercel: через серверный прокси (если PWA не установлен)
-      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+      // Используем Cloudflare Worker как прокси
+      const workerUrl = 'https://quiet-sound-ccaf.wpehack.workers.dev';
       
-      let response;
-      
-      if (isPWA) {
-        // Прямой запрос к WB API (PWA режим)
-        response = await fetch(`https://statistics-api.wildberries.ru${endpoint}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': user.wbApiKey,
-          },
-        });
-      } else {
-        // Через серверный прокси (браузер режим)
-        response = await fetch(`/api/wb-proxy?endpoint=${encodeURIComponent(endpoint)}`, {
-          method: 'GET',
-          headers: {
-            'Authorization': `Bearer ${user.wbApiKey}`,
-            'Content-Type': 'application/json',
-          },
-        });
-      }
+      const response = await fetch(`${workerUrl}?endpoint=${encodeURIComponent(endpoint)}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${user.wbApiKey}`,
+          'Content-Type': 'application/json',
+        },
+      });
 
       console.log(`[WB API] Статус: ${response.status}`);
 
