@@ -10,7 +10,6 @@ import VercelDeploy from './components/VercelDeploy';
 import AuthPage from './components/AuthPage';
 import ApiSetup from './components/ApiSetup';
 import ProfileSettings from './components/ProfileSettings';
-import WorkerUpdateGuide from './components/WorkerUpdateGuide';
 import { Bell, Search, Menu, X, LogOut, Key, Settings } from 'lucide-react';
 import { notifications } from './data/mockData';
 
@@ -66,8 +65,6 @@ function AppContent() {
         return <VercelDeploy />;
       case 'settings':
         return <ProfileSettings />;
-      case 'worker-update':
-        return <WorkerUpdateGuide />;
       default:
         return <Dashboard period={period} setPeriod={setPeriod} />;
     }
