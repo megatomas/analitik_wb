@@ -132,10 +132,33 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
                           <strong>Детали:</strong> {error.details}
                         </p>
                       )}
+                      
+                      {error.status === 404 && (
+                        <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                          <p className="text-xs font-medium text-blue-900 mb-2">🔧 Как исправить:</p>
+                          <ol className="text-xs text-blue-800 space-y-1 list-decimal list-inside">
+                            <li>Убедитесь что код запушен на GitHub: <code className="bg-white/50 px-1 rounded">git push</code></li>
+                            <li>Подождите 2-3 минуты пока Vercel развернёт серверные функции</li>
+                            <li>Проверьте что функция работает: <a href="/api/wb-proxy" target="_blank" className="underline">откройте /api/wb-proxy</a></li>
+                            <li>Должно появиться: <code className="bg-white/50 px-1 rounded">{'{"error":"API ключ не предоставлен"}'}</code></li>
+                            <li>Обновите страницу сайта (Ctrl+F5)</li>
+                          </ol>
+                          <p className="text-xs text-blue-700 mt-2">
+                            📖 <a href="https://github.com/ваш-username/ваш-репо/blob/main/FIX_API_ERROR.md" target="_blank" className="underline">Подробная инструкция</a>
+                          </p>
+                        </div>
+                      )}
+                      
                       <div className="text-xs text-gray-600 space-y-1 mt-2 border-t border-amber-200 pt-2">
                         <p><strong>Возможные причины:</strong></p>
                         <ul className="list-disc pl-4 space-y-0.5">
-                          {error.status === 429 ? (
+                          {error.status === 404 ? (
+                            <>
+                              <li>Серверные функции Vercel ещё не развернулись</li>
+                              <li>Код не запушен на GitHub</li>
+                              <li>Деплой ещё не завершился</li>
+                            </>
+                          ) : error.status === 429 ? (
                             <>
                               <li>Превышен лимит запросов к WB API</li>
                               <li>Слишком частые обновления страницы</li>
@@ -162,26 +185,31 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
                             </>
                           )}
                         </ul>
-                        <p className="mt-2"><strong>Решение:</strong></p>
-                        <ul className="list-disc pl-4 space-y-0.5">
-                          {error.status === 429 ? (
-                            <>
-                              <li>Подождите 1-2 минуты</li>
-                              <li>Обновите страницу (данные кэшируются на 3 минуты)</li>
-                            </>
-                          ) : error.status === 401 || error.status === 403 ? (
-                            <>
-                              <li>Откройте настройки профиля (клик на аватар)</li>
-                              <li>Проверьте или обновите API-ключ</li>
-                              <li>Убедитесь что отмечены: Статистика + Аналитика</li>
-                            </>
-                          ) : (
-                            <>
-                              <li>Проверьте интернет-соединение</li>
-                              <li>Попробуйте обновить страницу через минуту</li>
-                            </>
-                          )}
-                        </ul>
+                        
+                        {error.status !== 404 && (
+                          <>
+                            <p className="mt-2"><strong>Решение:</strong></p>
+                            <ul className="list-disc pl-4 space-y-0.5">
+                              {error.status === 429 ? (
+                                <>
+                                  <li>Подождите 1-2 минуты</li>
+                                  <li>Обновите страницу (данные кэшируются на 3 минуты)</li>
+                                </>
+                              ) : error.status === 401 || error.status === 403 ? (
+                                <>
+                                  <li>Откройте настройки профиля (клик на аватар)</li>
+                                  <li>Проверьте или обновите API-ключ</li>
+                                  <li>Убедитесь что отмечены: Статистика + Аналитика</li>
+                                </>
+                              ) : (
+                                <>
+                                  <li>Проверьте интернет-соединение</li>
+                                  <li>Попробуйте обновить страницу через минуту</li>
+                                </>
+                              )}
+                            </ul>
+                          </>
+                        )}
                       </div>
                     </div>
                   )}

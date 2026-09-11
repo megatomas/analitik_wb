@@ -67,15 +67,25 @@ export function useWBApi() {
     console.log(`[WB API] Запрос: ${endpoint}`);
 
     try {
-      const response = await fetch(`https://statistics-api.wildberries.ru${endpoint}`, {
+      // Пытаемся через наш серверный прокси (Vercel Functions)
+      const response = await fetch(`/api/wb-proxy?endpoint=${encodeURIComponent(endpoint)}`, {
         method: 'GET',
         headers: {
-          'Authorization': user.wbApiKey,
+          'Authorization': `Bearer ${user.wbApiKey}`,
           'Content-Type': 'application/json',
         },
       });
 
       console.log(`[WB API] Статус: ${response.status}`);
+
+      // Проверяем что серверная функция работает
+      if (response.status === 404) {
+        throw {
+          message: 'Сервер не настроен',
+          details: 'Серверные функции Vercel ещё не развернулись. Подождите 2-3 минуты после push или проверьте логи в Vercel Dashboard → Functions.',
+          status: 404,
+        };
+      }
 
       if (response.status === 429) {
         throw {
