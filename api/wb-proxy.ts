@@ -1,8 +1,14 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
+// Кэш в памяти серверной функции
+const cache = new Map<string, { data: any; timestamp: number }>();
+const CACHE_TTL = 10 * 60 * 1000; // 10 минут
+
 export const config = {
   api: {
-    bodyParser: false,
+    bodyParser: {
+      sizeLimit: '1mb',
+    },
   },
 };
 
@@ -10,7 +16,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
   res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Access-Control-Allow-Methods', 'GET,OPTIONS,PATCH,DELETE,POST,PUT');
+  res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader(
     'Access-Control-Allow-Headers',
     'X-CSRF-Token, X-Requested-With, Accept, Accept-Version, Content-Length, Content-MD5, Content-Type, Date, X-Api-Version, Authorization'
@@ -21,47 +27,86 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     return;
   }
 
-  try {
-    const { endpoint } = req.query;
-    const authHeader = req.headers.authorization;
-    
-    console.log('[wb-proxy] Получен запрос');
-    console.log('[wb-proxy] Endpoint:', endpoint);
-    console.log('[wb-proxy] Auth header:', authHeader ? 'present' : 'missing');
+  if (req.method !== 'POST') {
+    return res.status(405).json({ error: 'Method not allowed' });
+  }
 
-    // Извлекаем API-ключ (убираем "Bearer " если есть)
-    const apiKey = authHeader?.replace('Bearer ', '');
+  try {
+    const apiKey = req.headers.authorization?.replace('Bearer ', '');
 
     if (!apiKey) {
-      console.log('[wb-proxy] API ключ не предоставлен');
       return res.status(401).json({ error: 'API ключ не предоставлен' });
     }
 
-    if (!endpoint || typeof endpoint !== 'string') {
-      console.log('[wb-proxy] Endpoint не указан');
-      return res.status(400).json({ error: 'Endpoint не указан' });
+    const { method, url, body } = req.body;
+
+    if (!method || !url) {
+      return res.status(400).json({ error: 'method и url обязательны' });
     }
 
-    console.log('[wb-proxy] Запрашиваем WB API:', endpoint);
+    console.log(`[wb-proxy] ${method} ${url}`);
 
-    // Запрос к WB API (без "Bearer", только ключ)
-    const wbResponse = await fetch(`https://statistics-api.wildberries.ru${endpoint}`, {
+    // Кэш
+    const cacheKey = `${method}:${url}:${JSON.stringify(body || '')}`;
+    const cached = cache.get(cacheKey);
+
+    if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+      console.log('[wb-proxy] ✅ Cache HIT');
+      return res.status(200).json({
+         cached.data,
+        fromCache: true,
+      });
+    }
+
+    console.log('[wb-proxy] ❌ Cache MISS');
+
+    // Формируем запрос к WB API
+    const wbRequestOptions: RequestInit = {
+      method: method,
       headers: {
         Authorization: apiKey,
+        'Content-Type': 'application/json',
       },
+    };
+
+    if (body && method !== 'GET') {
+      wbRequestOptions.body = JSON.stringify(body);
+    }
+
+    // Запрос к WB API
+    const wbResponse = await fetch(url, wbRequestOptions);
+
+    console.log(`[wb-proxy] WB API status: ${wbResponse.status}`);
+
+    // Если WB вернул ошибку — не кэшируем
+    if (!wbResponse.ok) {
+      const errorText = await wbResponse.text();
+      return res.status(wbResponse.status).json({
+        error: 'Ошибка WB API',
+        details: errorText,
+      });
+    }
+
+    const data = await wbResponse.json();
+
+    // Сохраняем в кэш
+    cache.set(cacheKey, { data: data, timestamp: Date.now() });
+
+    // Ограничиваем размер кэша
+    if (cache.size > 100) {
+      const firstKey = cache.keys().next().value;
+      cache.delete(firstKey);
+    }
+
+    return res.status(200).json({
+       data,
+      fromCache: false,
     });
-
-    console.log('[wb-proxy] Ответ от WB API:', wbResponse.status);
-
-    const data = await wbResponse.text();
-
-    // Возвращаем ответ от WB
-    res.status(wbResponse.status).send(data);
   } catch (error: any) {
     console.error('[wb-proxy] Ошибка:', error);
-    res.status(500).json({ 
-      error: 'Ошибка сервера',
-      details: error.message 
+    return res.status(500).json({
+      error: 'Внутренняя ошибка сервера',
+      details: error.message,
     });
   }
 }

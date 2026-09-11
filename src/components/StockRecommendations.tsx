@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Package, TrendingUp, CheckCircle, Clock, Truck, Loader2, AlertCircle } from 'lucide-react';
+import { AlertTriangle, Package, TrendingUp, CheckCircle, Clock, Truck, Loader2, AlertCircle, Warehouse } from 'lucide-react';
 import { useWBApi } from '../services/wbApi';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -38,7 +38,7 @@ export default function StockRecommendations() {
       <div className="flex items-center justify-center h-96">
         <div className="text-center">
           <Loader2 size={40} className="animate-spin text-purple-600 mx-auto mb-4" />
-          <p className="text-gray-600">Анализируем остатки и продажи...</p>
+          <p className="text-gray-600">Анализируем остатки на складах WB и продавца...</p>
         </div>
       </div>
     );
@@ -61,6 +61,8 @@ export default function StockRecommendations() {
   const ok = stockRecommendations.filter((r) => r.urgency === 'ok');
 
   const totalToOrder = stockRecommendations.reduce((sum, r) => sum + r.recommendedOrder, 0);
+  const totalStockWB = stockRecommendations.reduce((sum, r) => sum + r.currentStockWB, 0);
+  const totalStockSeller = stockRecommendations.reduce((sum, r) => sum + r.currentStockSeller, 0);
 
   return (
     <div className="space-y-6">
@@ -73,7 +75,7 @@ export default function StockRecommendations() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-gradient-to-br from-red-50 to-red-100/50 rounded-2xl p-5 border border-red-200">
           <div className="flex items-center gap-2 mb-2">
             <AlertTriangle size={18} className="text-red-600" />
@@ -97,6 +99,14 @@ export default function StockRecommendations() {
           </div>
           <p className="text-3xl font-bold text-green-800">{ok.length}</p>
           <p className="text-xs text-green-600 mt-1">Достаточный запас</p>
+        </div>
+        <div className="bg-gradient-to-br from-blue-50 to-blue-100/50 rounded-2xl p-5 border border-blue-200">
+          <div className="flex items-center gap-2 mb-2">
+            <Warehouse size={18} className="text-blue-600" />
+            <span className="text-sm font-semibold text-blue-700">Общий остаток</span>
+          </div>
+          <p className="text-3xl font-bold text-blue-800">{totalStockWB + totalStockSeller}</p>
+          <p className="text-xs text-blue-600 mt-1">WB: {totalStockWB} | Продавец: {totalStockSeller}</p>
         </div>
       </div>
 
@@ -134,10 +144,28 @@ export default function StockRecommendations() {
               </div>
 
               <div className="flex items-center gap-6">
+                {/* Остаток на складе WB */}
                 <div className="text-center">
-                  <p className="text-xs text-gray-400">Остаток</p>
-                  <p className="text-lg font-bold text-gray-800">{rec.currentStock}</p>
+                  <p className="text-xs text-gray-400">Склад WB</p>
+                  <p className={`text-lg font-bold ${rec.currentStockWB === 0 ? 'text-red-600' : 'text-gray-800'}`}>
+                    {rec.currentStockWB}
+                  </p>
                 </div>
+
+                {/* Остаток на складе продавца */}
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Склад продавца</p>
+                  <p className={`text-lg font-bold ${rec.currentStockSeller === 0 ? 'text-red-600' : 'text-gray-800'}`}>
+                    {rec.currentStockSeller}
+                  </p>
+                </div>
+
+                {/* Общий остаток */}
+                <div className="text-center">
+                  <p className="text-xs text-gray-400">Всего</p>
+                  <p className="text-lg font-bold text-purple-700">{rec.totalStock}</p>
+                </div>
+
                 <div className="text-center">
                   <p className="text-xs text-gray-400">Продаж/день</p>
                   <p className="text-lg font-bold text-gray-800">{rec.dailySales}</p>
@@ -168,11 +196,11 @@ export default function StockRecommendations() {
                       ? 'bg-gradient-to-r from-yellow-400 to-yellow-600'
                       : 'bg-gradient-to-r from-green-400 to-green-600'
                   }`}
-                  style={{ width: `${Math.min((rec.currentStock / (rec.dailySales * 14)) * 100, 100)}%` }}
+                  style={{ width: `${Math.min((rec.totalStock / (rec.dailySales * 14)) * 100, 100)}%` }}
                 />
               </div>
               <span className="text-[10px] text-gray-400">
-                {Math.round((rec.currentStock / (rec.dailySales * 14)) * 100)}% от нормы
+                {Math.round((rec.totalStock / (rec.dailySales * 14)) * 100)}% от нормы
               </span>
             </div>
           </div>
@@ -188,9 +216,7 @@ export default function StockRecommendations() {
           <div>
             <h4 className="font-semibold mb-1">💡 Рекомендация ИИ-аналитика</h4>
             <p className="text-sm text-white/80">
-              На основе анализа трендов продаж за последние 30 дней, рекомендуется увеличить общий заказ на 15%.
-              Ожидается рост спроса на категорию "Обувь" в связи с началом летнего сезона. Также обратите внимание
-              на товар "Футболка хлопок oversize" — его можно заказать с запасом, т.к. цена у поставщика сейчас минимальна.
+              На основе анализа остатков на складах WB и продавца, рекомендуется равномерно распределить товары между складами для оптимизации доставки. Обратите внимание на товары с нулевым остатком — их нужно срочно пополнить.
             </p>
           </div>
         </div>

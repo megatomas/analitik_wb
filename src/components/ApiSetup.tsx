@@ -180,7 +180,7 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
               },
               {
                 step: '3',
-                title: 'Создайте ключ',
+                title: 'Создайте персональный токен',
                 desc: 'Скопируйте и вставьте сюда',
                 link: null,
               },
@@ -236,7 +236,7 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
                 <div className="space-y-2">
                   {[
                     { name: 'Статистика', required: true, desc: 'Данные о продажах и заказах' },
-                    { name: 'Аналитика', required: true, desc: 'Остатки на складах (НОВЫЙ API)' },
+                    { name: 'Аналитика', required: true, desc: 'Остатки на складах (WB и продавца)' },
                     { name: 'Контент', required: false, desc: 'Данные карточек товаров (опционально)' },
                     { name: 'Маркетплейс', required: false, desc: 'Общая информация маркетплейса' },
                     { name: 'Финансы', required: false, desc: 'Финансовые операции и отчёты' },

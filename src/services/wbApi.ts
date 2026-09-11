@@ -1,19 +1,21 @@
 import { useAuth } from '../contexts/AuthContext';
 
-// Кэш в памяти
+// Кэш в памяти браузера
 const memoryCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 10 * 60 * 1000; // 10 минут
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут
 
-// Правильные URL для WB API (проверено в PyCharm)
+// Правильные URL для WB API
 const WB_API = {
-  // Остатки — POST запрос с JSON-телом
-  stocks: 'https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/wb-warehouses',
+  // Остатки на складах WB — POST запрос с JSON-телом
+  stocksWB: 'https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/wb-warehouses',
+  // Остатки на складах продавца — POST запрос
+  stocksSeller: 'https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/seller-warehouses',
   // Продажи — GET запрос
   sales: 'https://statistics-api.wildberries.ru/api/v1/supplier/sales',
 };
 
-// Cloudflare Worker прокси
-const WORKER_URL = 'https://quiet-sound-ccaf.wpehack.workers.dev';
+// Vercel Serverless Function прокси
+const PROXY_URL = '/api/wb-proxy';
 
 export interface SalesData {
   revenue: number;
@@ -33,7 +35,7 @@ export interface StockItem {
   nmId: number;
   chrtId: number;
   warehouseName: string;
-  regionName: string;
+  regionName?: string;
   quantity: number;
   inWayToClient: number;
   inWayFromClient: number;
@@ -42,7 +44,9 @@ export interface StockItem {
 export interface StockRecommendation {
   productId: number;
   productName: string;
-  currentStock: number;
+  currentStockWB: number;
+  currentStockSeller: number;
+  totalStock: number;
   dailySales: number;
   daysUntilStockout: number;
   recommendedOrder: number;
@@ -65,8 +69,8 @@ function setCache(key: string, data: any) {
 export function useWBApi() {
   const { user } = useAuth();
 
-  // Универсальная функция для запросов через Worker
-  const fetchViaWorker = async (
+  // Универсальная функция для запросов через Vercel proxy
+  const fetchViaProxy = async (
     method: 'GET' | 'POST',
     targetUrl: string,
     body?: any
@@ -85,11 +89,10 @@ export function useWBApi() {
     console.log(`[WB API] ${method} запрос: ${targetUrl}`);
 
     try {
-      // Формируем запрос к Worker
-      const workerRequest: any = {
-        method: 'POST', // Worker всегда принимает POST
+      const response = await fetch(PROXY_URL, {
+        method: 'POST',
         headers: {
-          'Authorization': user.wbApiKey,
+          'Authorization': `Bearer ${user.wbApiKey}`,
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
@@ -97,9 +100,7 @@ export function useWBApi() {
           url: targetUrl,
           body: body || null,
         }),
-      };
-
-      const response = await fetch(WORKER_URL, workerRequest);
+      });
 
       console.log(`[WB API] Статус: ${response.status}`);
 
@@ -136,7 +137,9 @@ export function useWBApi() {
         };
       }
 
-      const data = await response.json();
+      const result = await response.json();
+      const data = result.data;
+      
       setCache(cacheKey, data);
       return data;
     } catch (error: any) {
@@ -145,7 +148,7 @@ export function useWBApi() {
       if (error.message?.includes('Failed to fetch')) {
         throw {
           message: 'Ошибка сети',
-          details: 'Не удалось подключиться к Worker.',
+          details: 'Не удалось подключиться к серверу.',
           status: 0,
         };
       }
@@ -170,8 +173,7 @@ export function useWBApi() {
     dateFrom.setDate(dateFrom.getDate() - 60);
     const dateFromStr = dateFrom.toISOString().split('T')[0];
 
-    // GET запрос к statistics-api
-    const sales = await fetchViaWorker(
+    const sales = await fetchViaProxy(
       'GET',
       `${WB_API.sales}?dateFrom=${dateFromStr}`
     );
@@ -224,29 +226,52 @@ export function useWBApi() {
     return result;
   };
 
-  // Получение остатков (НОВЫЙ API — POST)
-  const getStocks = async (): Promise<StockItem[]> => {
-    const cacheKey = 'stocks_raw';
+  // Получение остатков на складах WB
+  const getStocksWB = async (): Promise<StockItem[]> => {
+    const cacheKey = 'stocks_wb';
     const cached = getCached<StockItem[]>(cacheKey);
     if (cached) {
       return cached;
     }
 
-    // POST запрос с JSON-телом
-    const response = await fetchViaWorker(
+    const response = await fetchViaProxy(
       'POST',
-      WB_API.stocks,
+      WB_API.stocksWB,
       { limit: 250000, offset: 0 }
     );
 
-    // Новый API возвращает: { data: { items: [...] } }
-    const items = response?.data?.items || [];
-
+    const items = response?.items || [];
     setCache(cacheKey, items);
     return items;
   };
 
-  // Получение рекомендаций по пополнению
+  // Получение остатков на складах продавца
+  const getStocksSeller = async (): Promise<StockItem[]> => {
+    const cacheKey = 'stocks_seller';
+    const cached = getCached<StockItem[]>(cacheKey);
+    if (cached) {
+      return cached;
+    }
+
+    try {
+      const response = await fetchViaProxy(
+        'POST',
+        WB_API.stocksSeller,
+        { limit: 250000, offset: 0 }
+      );
+
+      const items = response?.items || [];
+      setCache(cacheKey, items);
+      return items;
+    } catch (error) {
+      // Если endpoint недоступен, возвращаем пустой массив
+      console.warn('[WB API] Остатки на складах продавца недоступны:', error);
+      setCache(cacheKey, []);
+      return [];
+    }
+  };
+
+  // Получение рекомендаций по пополнению (с учётом обоих складов)
   const getStockRecommendations = async (): Promise<StockRecommendation[]> => {
     const cacheKey = 'stock_recommendations';
     const cached = getCached<StockRecommendation[]>(cacheKey);
@@ -255,31 +280,34 @@ export function useWBApi() {
     }
 
     // Получаем остатки и продажи параллельно
-    const [stocks, sales] = await Promise.all([
-      getStocks(),
-      fetchViaWorker(
+    const [stocksWB, stocksSeller, sales] = await Promise.all([
+      getStocksWB(),
+      getStocksSeller(),
+      fetchViaProxy(
         'GET',
         `${WB_API.sales}?dateFrom=${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`
       ),
     ]);
 
-    // Группируем остатки по товарам (nmId)
-    const productStocks = new Map<number, any>();
-    stocks.forEach((stock: any) => {
+    // Группируем остатки на складах WB по товарам
+    const productStocksWB = new Map<number, number>();
+    stocksWB.forEach((stock: any) => {
       const key = stock.nmId;
-      if (!productStocks.has(key)) {
-        productStocks.set(key, {
-          nmId: stock.nmId,
-          totalStock: 0,
-          inWayToClient: 0,
-          inWayFromClient: 0,
-        });
-      }
-      const product = productStocks.get(key);
-      product.totalStock += stock.quantity || 0;
-      product.inWayToClient += stock.inWayToClient || 0;
-      product.inWayFromClient += stock.inWayFromClient || 0;
+      productStocksWB.set(key, (productStocksWB.get(key) || 0) + (stock.quantity || 0));
     });
+
+    // Группируем остатки на складах продавца по товарам
+    const productStocksSeller = new Map<number, number>();
+    stocksSeller.forEach((stock: any) => {
+      const key = stock.nmId;
+      productStocksSeller.set(key, (productStocksSeller.get(key) || 0) + (stock.quantity || 0));
+    });
+
+    // Объединяем все уникальные товары
+    const allProductIds = new Set([
+      ...productStocksWB.keys(),
+      ...productStocksSeller.keys(),
+    ]);
 
     // Считаем продажи по товарам за 30 дней
     const productSales = new Map<number, number>();
@@ -293,22 +321,27 @@ export function useWBApi() {
     }
 
     // Формируем рекомендации
-    const result = Array.from(productStocks.values())
-      .map((product: any) => {
-        const salesCount = productSales.get(product.nmId) || 0;
+    const result = Array.from(allProductIds)
+      .map((nmId: number) => {
+        const currentStockWB = productStocksWB.get(nmId) || 0;
+        const currentStockSeller = productStocksSeller.get(nmId) || 0;
+        const totalStock = currentStockWB + currentStockSeller;
+        
+        const salesCount = productSales.get(nmId) || 0;
         const dailySales = salesCount / 30;
         const daysUntilStockout =
           dailySales > 0
-            ? Math.floor(product.totalStock / dailySales)
+            ? Math.floor(totalStock / dailySales)
             : 999;
 
         let urgency: 'critical' | 'warning' | 'ok' = 'ok';
         let recommendedOrder = 0;
         let reason = '';
 
-        if (product.totalStock === 0 && product.inWayToClient > 0) {
-          urgency = 'warning';
-          reason = `На складе 0 шт., в пути ${product.inWayToClient} шт.`;
+        if (totalStock === 0) {
+          urgency = 'critical';
+          recommendedOrder = Math.ceil(dailySales * 14);
+          reason = 'Нет остатков ни на одном складе!';
         } else if (daysUntilStockout <= 3) {
           urgency = 'critical';
           recommendedOrder = Math.ceil(dailySales * 14);
@@ -322,9 +355,11 @@ export function useWBApi() {
         }
 
         return {
-          productId: product.nmId,
-          productName: `Артикул ${product.nmId}`,
-          currentStock: product.totalStock,
+          productId: nmId,
+          productName: `Артикул ${nmId}`,
+          currentStockWB,
+          currentStockSeller,
+          totalStock,
           dailySales: Math.round(dailySales * 10) / 10,
           daysUntilStockout: Math.min(daysUntilStockout, 999),
           recommendedOrder,
@@ -332,7 +367,7 @@ export function useWBApi() {
           reason,
         };
       })
-      .sort((a: any, b: any) => a.daysUntilStockout - b.daysUntilStockout)
+      .sort((a, b) => a.daysUntilStockout - b.daysUntilStockout)
       .slice(0, 20);
 
     setCache(cacheKey, result);
@@ -341,7 +376,8 @@ export function useWBApi() {
 
   return {
     getSales,
-    getStocks,
+    getStocksWB,
+    getStocksSeller,
     getStockRecommendations,
   };
 }
