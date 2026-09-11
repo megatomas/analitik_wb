@@ -213,13 +213,19 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
             </h5>
             
             <div className="space-y-4">
-              {/* Token Type */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <p className="text-sm font-medium text-blue-900 mb-2">🔑 Тип токена:</p>
-                <div className="bg-white rounded-lg p-3 border border-blue-100">
-                  <p className="text-sm font-bold text-blue-800">Базовый токен</p>
-                  <p className="text-xs text-blue-700 mt-1">
-                    Для ручного подключения внешних сервисов
+              {/* Token Type - ВАЖНО! */}
+              <div className="bg-red-50 border-2 border-red-300 rounded-xl p-4">
+                <p className="text-sm font-bold text-red-900 mb-2 flex items-center gap-2">
+                  <AlertTriangle size={16} className="text-red-600" />
+                  ⚠️ ВАЖНО: Нужен ПЕРСОНАЛЬНЫЙ токен!
+                </p>
+                <p className="text-xs text-red-800 mb-2">
+                  Wildberries ввёл ограничения. Обычные токены больше не работают!
+                </p>
+                <div className="bg-white rounded-lg p-3 border border-red-200 mt-2">
+                  <p className="text-sm font-bold text-red-800">🔑 Тип токена: Персональный</p>
+                  <p className="text-xs text-red-700 mt-1">
+                    Создайте именно <strong>персональный токен</strong> в кабинете WB
                   </p>
                 </div>
               </div>
@@ -229,8 +235,8 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
                 <p className="text-sm font-medium text-green-900 mb-2">📊 Категории данных (отметьте галочками):</p>
                 <div className="space-y-2">
                   {[
-                    { name: 'Статистика', required: true, desc: 'Данные о продажах, заказах, остатках' },
-                    { name: 'Аналитика', required: true, desc: 'Расширенная аналитика и отчёты' },
+                    { name: 'Статистика', required: true, desc: 'Данные о продажах и заказах' },
+                    { name: 'Аналитика', required: true, desc: 'Остатки на складах (НОВЫЙ API)' },
                     { name: 'Контент', required: false, desc: 'Данные карточек товаров (опционально)' },
                     { name: 'Маркетплейс', required: false, desc: 'Общая информация маркетплейса' },
                     { name: 'Финансы', required: false, desc: 'Финансовые операции и отчёты' },
