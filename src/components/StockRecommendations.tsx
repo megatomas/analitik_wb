@@ -22,8 +22,8 @@ export default function StockRecommendations() {
         setError(null);
         const data = await getStockRecommendations();
         setStockRecommendations(data);
-      } catch (err) {
-        setError('Не удалось загрузить данные об остатках.');
+      } catch (err: any) {
+        setError(err.message || 'Не удалось загрузить данные об остатках.');
         console.error(err);
       } finally {
         setLoading(false);
