@@ -10,8 +10,8 @@ const WB_API = {
   stocksWB: 'https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/wb-warehouses',
   // Остатки на складах продавца — POST запрос
   stocksSeller: 'https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/seller-warehouses',
-  // Продажи — GET запрос
-  sales: 'https://statistics-api.wildberries.ru/api/v1/supplier/sales',
+  // Заказы и продажи (все склады) — POST запрос
+  orderFeed: 'https://seller-analytics-api.wildberries.ru/api/analytics/v1/order-feed',
 };
 
 // Vercel Serverless Function прокси
@@ -163,7 +163,7 @@ export function useWBApi() {
     }
   };
 
-  // Получение продаж
+  // Получение продаж (все заказы со всех складов)
   const getSales = async (): Promise<SalesResponse> => {
     const cacheKey = 'sales_data';
     const cached = getCached<SalesResponse>(cacheKey);
@@ -171,17 +171,32 @@ export function useWBApi() {
       return cached;
     }
 
+    // Order Feed API возвращает данные максимум за 31 день
     const dateFrom = new Date();
-    dateFrom.setDate(dateFrom.getDate() - 60);
-    const dateFromStr = dateFrom.toISOString().split('T')[0];
-
-    const salesResponse = await fetchViaProxy(
-      'GET',
-      `${WB_API.sales}?dateFrom=${dateFromStr}`
+    dateFrom.setDate(dateFrom.getDate() - 31);
+    const dateTo = new Date();
+    
+    const orderFeedResponse = await fetchViaProxy(
+      'POST',
+      WB_API.orderFeed,
+      {
+        selectedPeriod: {
+          start: dateFrom.toISOString(),
+          end: dateTo.toISOString(),
+        },
+        nmIds: [],
+        subjectIds: [],
+        brandNames: [],
+        tagIds: [],
+        pagination: {
+          offset: 0,
+          limit: 1000,
+        },
+      }
     );
     
-    // WB API для sales возвращает массив напрямую
-    const sales = Array.isArray(salesResponse) ? salesResponse : [];
+    // Order Feed возвращает { data: { orders: [...] } }
+    const orders = orderFeedResponse?.data?.orders || [];
 
     const now = new Date();
     const yesterday = new Date(now);
@@ -191,40 +206,45 @@ export function useWBApi() {
     const weekAgo = new Date(now);
     weekAgo.setDate(weekAgo.getDate() - 7);
 
-    const calculateMetrics = (salesData: any[]): SalesData => {
-      const revenue = salesData.reduce(
-        (sum, s) => sum + (s.retailPriceWithDiscRub || s.retailPrice || 0),
+    const calculateMetrics = (ordersData: any[]): SalesData => {
+      // Фильтруем только успешные заказы (не отменённые)
+      const successfulOrders = ordersData.filter(
+        (o) => o.status !== 'cancel' && o.status !== 'return'
+      );
+      
+      const revenue = successfulOrders.reduce(
+        (sum, o) => sum + (o.sellerPrice || 0),
         0
       );
-      const orders = salesData.length;
-      const avgCheck = orders > 0 ? revenue / orders : 0;
-      const returns = salesData.filter(
-        (s) => s.isCancel === true || s.isReturn === true
+      const orderCount = successfulOrders.length;
+      const avgCheck = orderCount > 0 ? revenue / orderCount : 0;
+      const returns = ordersData.filter(
+        (o) => o.status === 'cancel' || o.status === 'return'
       ).length;
 
       return {
         revenue: Math.round(revenue),
-        orders,
+        orders: orderCount,
         avgCheck: Math.round(avgCheck),
         returns,
         conversion: 4.2,
       };
     };
 
-    const yesterdaySales = sales.filter((s: any) => {
-      const d = new Date(s.date);
+    const yesterdayOrders = orders.filter((o: any) => {
+      const d = new Date(o.createdAt);
       d.setHours(0, 0, 0, 0);
       return d.getTime() === yesterday.getTime();
     });
 
-    const weekSales = sales.filter(
-      (s: any) => new Date(s.date) >= weekAgo
+    const weekOrders = orders.filter(
+      (o: any) => new Date(o.createdAt) >= weekAgo
     );
 
     const result = {
-      yesterday: calculateMetrics(yesterdaySales),
-      week: calculateMetrics(weekSales),
-      month: calculateMetrics(sales),
+      yesterday: calculateMetrics(yesterdayOrders),
+      week: calculateMetrics(weekOrders),
+      month: calculateMetrics(orders),
     };
 
     setCache(cacheKey, result);
@@ -287,18 +307,36 @@ export function useWBApi() {
       return cached;
     }
 
-    // Получаем остатки и продажи параллельно
-    const [stocksWB, stocksSeller, salesResponse] = await Promise.all([
+    // Получаем остатки и заказы параллельно
+    const dateFrom = new Date();
+    dateFrom.setDate(dateFrom.getDate() - 30);
+    const dateTo = new Date();
+    
+    const [stocksWB, stocksSeller, ordersResponse] = await Promise.all([
       getStocksWB(),
       getStocksSeller(),
       fetchViaProxy(
-        'GET',
-        `${WB_API.sales}?dateFrom=${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`
+        'POST',
+        WB_API.orderFeed,
+        {
+          selectedPeriod: {
+            start: dateFrom.toISOString(),
+            end: dateTo.toISOString(),
+          },
+          nmIds: [],
+          subjectIds: [],
+          brandNames: [],
+          tagIds: [],
+          pagination: {
+            offset: 0,
+            limit: 1000,
+          },
+        }
       ),
     ]);
     
-    // WB API для sales возвращает массив напрямую
-    const sales = Array.isArray(salesResponse) ? salesResponse : [];
+    // Order Feed возвращает { data: { orders: [...] } }
+    const orders = ordersResponse?.data?.orders || [];
 
     // Группируем остатки на складах WB по товарам
     const productStocksWB = new Map<number, number>();
@@ -320,11 +358,15 @@ export function useWBApi() {
       ...productStocksSeller.keys(),
     ]);
 
-    // Считаем продажи по товарам за 30 дней
+    // Считаем заказы по товарам за 30 дней (только успешные)
     const productSales = new Map<number, number>();
-    if (Array.isArray(sales)) {
-      sales.forEach((sale: any) => {
-        const key = sale.nmId;
+    if (Array.isArray(orders)) {
+      orders.forEach((order: any) => {
+        // Пропускаем отменённые заказы
+        if (order.status === 'cancel' || order.status === 'return') {
+          return;
+        }
+        const key = order.nmId;
         if (key) {
           productSales.set(key, (productSales.get(key) || 0) + 1);
         }

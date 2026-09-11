@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { AlertTriangle, Package, TrendingUp, CheckCircle, Clock, Truck, Loader2, AlertCircle, Warehouse } from 'lucide-react';
+import { AlertTriangle, Package, TrendingUp, CheckCircle, Clock, Truck, Loader2, AlertCircle, Warehouse, Info } from 'lucide-react';
 import { useWBApi } from '../services/wbApi';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -216,7 +216,22 @@ export default function StockRecommendations() {
           <div>
             <h4 className="font-semibold mb-1">💡 Рекомендация ИИ-аналитика</h4>
             <p className="text-sm text-white/80">
-              На основе анализа остатков на складах WB и продавца, рекомендуется равномерно распределить товары между складами для оптимизации доставки. Обратите внимание на товары с нулевым остатком — их нужно срочно пополнить.
+              На основе анализа остатков на складах WB и продавца, а также заказов со всех складов, рекомендуется равномерно распределить товары между складами для оптимизации доставки. Обратите внимание на товары с нулевым остатком — их нужно срочно пополнить.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Info about data sources */}
+      <div className="bg-blue-50 border border-blue-200 rounded-2xl p-4">
+        <div className="flex items-start gap-3">
+          <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Info size={16} className="text-blue-600" />
+          </div>
+          <div>
+            <h4 className="text-sm font-semibold text-blue-900 mb-1">ℹ️ Источники данных</h4>
+            <p className="text-xs text-blue-800">
+              Рекомендации рассчитываются на основе остатков на складах WB и продавца, а также заказов со всех складов за последние 30 дней. Данные обновляются автоматически каждые 10 минут.
             </p>
           </div>
         </div>
