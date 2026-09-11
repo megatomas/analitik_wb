@@ -4,7 +4,14 @@ const WB_API_BASE = 'https://statistics-api.wildberries.ru/api/v1';
 
 // Кэш в памяти
 const memoryCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 5 * 60 * 1000; // 5 минут (увеличил для снижения нагрузки на WB API)
+const CACHE_TTL = 10 * 60 * 1000; // 10 минут (увеличиваем чтобы избежать 429)
+
+// Правильные URL для WB API (из теста)
+const API_URLS = {
+  orders: 'https://marketplace-api.wildberries.ru/api/v3/orders/new',
+  statistics: 'https://statistics-api.wildberries.ru/api/v1/supplier/sales',
+  stocks: 'https://statistics-api.wildberries.ru/api/v1/supplier/stocks',
+};
 
 export interface SalesData {
   revenue: number;
@@ -146,6 +153,13 @@ export function useWBApi() {
   };
 
   const getSales = async (): Promise<SalesResponse> => {
+    const cacheKey = 'sales_data';
+    const cached = getCached<SalesResponse>(cacheKey);
+    if (cached) {
+      console.log('[WB API] Возвращаем из кэша');
+      return cached;
+    }
+
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() - 60);
     const dateFromStr = dateFrom.toISOString().split('T')[0];
@@ -187,14 +201,27 @@ export function useWBApi() {
 
     const weekSales = sales.filter((s: any) => new Date(s.date) >= weekAgo);
 
-    return {
+    const result = {
       yesterday: calculateMetrics(yesterdaySales),
       week: calculateMetrics(weekSales),
       month: calculateMetrics(sales),
     };
+
+    // Сохраняем в кэш
+    setCache(cacheKey, result);
+    console.log('[WB API] Сохраняем в кэш на 10 минут');
+
+    return result;
   };
 
   const getStockRecommendations = async (): Promise<StockRecommendation[]> => {
+    const cacheKey = 'stocks_data';
+    const cached = getCached<StockRecommendation[]>(cacheKey);
+    if (cached) {
+      console.log('[WB API] Возвращаем остатки из кэша');
+      return cached;
+    }
+
     // Получаем остатки
     const dateFrom = new Date();
     dateFrom.setDate(dateFrom.getDate() - 1);
@@ -229,7 +256,7 @@ export function useWBApi() {
     });
 
     // Формируем рекомендации
-    return Array.from(productStocks.values())
+    const result = Array.from(productStocks.values())
       .map((product: any) => {
         const salesCount = productSales.get(product.nmId) || 0;
         const dailySales = salesCount / 30;
@@ -267,6 +294,12 @@ export function useWBApi() {
       .filter((item: any) => item.currentStock > 0)
       .sort((a: any, b: any) => a.daysUntilStockout - b.daysUntilStockout)
       .slice(0, 20);
+
+    // Сохраняем в кэш
+    setCache(cacheKey, result);
+    console.log('[WB API] Сохраняем остатки в кэш на 10 минут');
+
+    return result;
   };
 
   return {
