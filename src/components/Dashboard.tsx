@@ -112,6 +112,21 @@ export default function Dashboard({ period, setPeriod }: DashboardProps) {
                 Не удалось загрузить реальные данные из Wildberries. Отображаются демо-данные.
               </p>
               
+              {error?.status === 429 && (
+                <div className="mt-3 bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm font-medium text-blue-900 mb-2">⏳ Подождите 1-2 минуты</p>
+                  <p className="text-xs text-blue-800 mb-3">
+                    Wildberries ограничивает частоту запросов. Данные кэшируются на 5 минут.
+                  </p>
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition-colors"
+                  >
+                    🔄 Обновить страницу
+                  </button>
+                </div>
+              )}
+              
               {error && (
                 <div className="mt-3">
                   <button

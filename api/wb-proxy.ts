@@ -23,29 +23,42 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { endpoint } = req.query;
-    const apiKey = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization;
+    
+    console.log('[wb-proxy] Получен запрос');
+    console.log('[wb-proxy] Endpoint:', endpoint);
+    console.log('[wb-proxy] Auth header:', authHeader ? 'present' : 'missing');
+
+    // Извлекаем API-ключ (убираем "Bearer " если есть)
+    const apiKey = authHeader?.replace('Bearer ', '');
 
     if (!apiKey) {
+      console.log('[wb-proxy] API ключ не предоставлен');
       return res.status(401).json({ error: 'API ключ не предоставлен' });
     }
 
     if (!endpoint || typeof endpoint !== 'string') {
+      console.log('[wb-proxy] Endpoint не указан');
       return res.status(400).json({ error: 'Endpoint не указан' });
     }
 
-    // Запрос к WB API
+    console.log('[wb-proxy] Запрашиваем WB API:', endpoint);
+
+    // Запрос к WB API (без "Bearer", только ключ)
     const wbResponse = await fetch(`https://statistics-api.wildberries.ru${endpoint}`, {
       headers: {
         Authorization: apiKey,
       },
     });
 
+    console.log('[wb-proxy] Ответ от WB API:', wbResponse.status);
+
     const data = await wbResponse.text();
 
     // Возвращаем ответ от WB
     res.status(wbResponse.status).send(data);
   } catch (error: any) {
-    console.error('Proxy error:', error);
+    console.error('[wb-proxy] Ошибка:', error);
     res.status(500).json({ 
       error: 'Ошибка сервера',
       details: error.message 
