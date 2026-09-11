@@ -125,7 +125,7 @@ export default function StockRecommendations() {
           >
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
               <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
+                <div className="flex items-center gap-2 mb-2">
                   <Package size={16} className="text-gray-400" />
                   <h4 className="font-semibold text-gray-800">{rec.productName}</h4>
                   <span
@@ -140,15 +140,33 @@ export default function StockRecommendations() {
                     {rec.urgency === 'critical' ? 'Критично' : rec.urgency === 'warning' ? 'Внимание' : 'OK'}
                   </span>
                 </div>
-                <div className="flex items-center gap-3 mb-1">
-                  <span className="text-xs text-gray-500">WB артикул: <span className="font-mono font-medium text-gray-700">{rec.productId}</span></span>
+                
+                {/* Информация об артикулах */}
+                <div className="space-y-1 mb-2">
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-gray-500 min-w-[120px]">WB артикул:</span>
+                    <span className="text-xs font-mono font-medium text-gray-700">{rec.productId}</span>
+                  </div>
                   {rec.vendorCode && (
-                    <span className="text-xs text-gray-500">Артикул продавца: <span className="font-mono font-medium text-gray-700">{rec.vendorCode}</span></span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 min-w-[120px]">Артикул продавца:</span>
+                      <span className="text-xs font-mono font-medium text-gray-700">{rec.vendorCode}</span>
+                    </div>
                   )}
                   {rec.barcode && (
-                    <span className="text-xs text-gray-500">Баркод: <span className="font-mono font-medium text-gray-700">{rec.barcode}</span></span>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-gray-500 min-w-[120px]">Баркод:</span>
+                      <span className="text-xs font-mono font-medium text-gray-700">{rec.barcode}</span>
+                    </div>
+                  )}
+                  {!rec.vendorCode && !rec.barcode && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-amber-600 min-w-[120px]">ℹ️ Информация:</span>
+                      <span className="text-xs text-amber-600">Добавьте категорию "Контент" в токен для отображения названия и артикула продавца</span>
+                    </div>
                   )}
                 </div>
+                
                 <p className="text-sm text-gray-500">{rec.reason}</p>
               </div>
 

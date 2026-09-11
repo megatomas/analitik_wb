@@ -418,6 +418,9 @@ export function useWBApi() {
       
       // Запрос к Content API для получения названий товаров
       const nmIds = Array.from(allProductIds).slice(0, 20); // Топ-20 товаров
+      
+      console.log('[WB API] Запрашиваем информацию о товарах из Content API для', nmIds.length, 'товаров');
+      
       const cardsResponse = await fetchViaProxy(
         'POST',
         'https://content-api.wildberries.ru/content/v2/get/cards/list',
@@ -426,26 +429,32 @@ export function useWBApi() {
             cursor: { limit: 100 },
             filter: {
               withPhoto: -1,
-              textSearch: nmIds.join(','),
+              nmIDs: nmIds, // Используем nmIDs вместо textSearch
             },
           },
         }
       );
       
+      console.log('[WB API] Ответ от Content API:', cardsResponse);
+      
       // Парсим ответ Content API
       if (cardsResponse?.data?.cards) {
+        console.log('[WB API] Получено карточек:', cardsResponse.data.cards.length);
         cardsResponse.data.cards.forEach((card: any) => {
           if (card.nmID) {
             productInfo.set(card.nmID, {
-              title: card.title || card.subjectName,
+              title: card.title || card.subjectName || `Товар ${card.nmID}`,
               vendorCode: card.vendorCode,
               barcode: card.barcodes?.[0] || card.sizes?.[0]?.skus?.[0],
             });
           }
         });
+      } else {
+        console.warn('[WB API] Content API не вернул данные. Возможно нет категории "Контент" в токене.');
       }
-    } catch (error) {
-      console.warn('[WB API] Не удалось получить информацию о товарах из Content API:', error);
+    } catch (error: any) {
+      console.warn('[WB API] Не удалось получить информацию о товарах из Content API:', error.message);
+      console.warn('[WB API] Убедитесь что в токене отмечена категория "Контент"');
       // Продолжаем без информации о товарах
     }
 
