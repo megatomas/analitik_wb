@@ -9,7 +9,8 @@ import Platforms from './components/Platforms';
 import VercelDeploy from './components/VercelDeploy';
 import AuthPage from './components/AuthPage';
 import ApiSetup from './components/ApiSetup';
-import { Bell, Search, Menu, X, LogOut, Key } from 'lucide-react';
+import ProfileSettings from './components/ProfileSettings';
+import { Bell, Search, Menu, X, LogOut, Key, Settings } from 'lucide-react';
 import { notifications } from './data/mockData';
 
 function AppContent() {
@@ -62,6 +63,8 @@ function AppContent() {
         return <Platforms />;
       case 'deploy':
         return <VercelDeploy />;
+      case 'settings':
+        return <ProfileSettings />;
       default:
         return <Dashboard period={period} setPeriod={setPeriod} />;
     }
@@ -182,15 +185,28 @@ function AppContent() {
 
             {/* User */}
             <div className="flex items-center gap-2 pl-3 border-l border-gray-200">
-              <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-                <span className="text-white text-xs font-bold">
-                  {user?.name?.charAt(0).toUpperCase() || 'U'}
-                </span>
-              </div>
-              <div className="hidden md:block">
-                <p className="text-sm font-medium text-gray-700">{user?.name || 'Пользователь'}</p>
-                <p className="text-[10px] text-gray-400">{user?.email}</p>
-              </div>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="flex items-center gap-2 hover:bg-gray-100 rounded-lg p-1.5 transition-colors"
+                title="Настройки профиля"
+              >
+                <div className="w-8 h-8 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
+                  <span className="text-white text-xs font-bold">
+                    {user?.name?.charAt(0).toUpperCase() || 'U'}
+                  </span>
+                </div>
+                <div className="hidden md:block text-left">
+                  <p className="text-sm font-medium text-gray-700">{user?.name || 'Пользователь'}</p>
+                  <p className="text-[10px] text-gray-400">{user?.email}</p>
+                </div>
+              </button>
+              <button
+                onClick={() => setActiveTab('settings')}
+                className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Настройки"
+              >
+                <Settings size={16} className="text-gray-400" />
+              </button>
               <button
                 onClick={logout}
                 className="p-1.5 hover:bg-gray-100 rounded-lg transition-colors"
