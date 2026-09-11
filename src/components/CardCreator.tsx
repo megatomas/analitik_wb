@@ -177,6 +177,32 @@ export default function CardCreator() {
         <p className="text-gray-600">Создайте профессиональную карточку товара с помощью ИИ за 3 шага</p>
       </div>
 
+      {/* Бесплатная альтернатива - PixelPanda */}
+      <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-5">
+        <div className="flex items-start gap-3">
+          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <span className="text-2xl">🎁</span>
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-green-900 mb-1">
+              Бесплатная альтернатива с ИИ генерацией
+            </h3>
+            <p className="text-sm text-green-800 mb-3">
+              Хотите карточки как в Aidentika.com? Используйте <strong>PixelPanda</strong> - 
+              3 генерации в день бесплатно, без регистрации!
+            </p>
+            <a 
+              href="https://pixelpanda.ai/free-tools/ecommerce-product-photography"
+              target="_blank"
+              rel="noreferrer"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
+            >
+              Попробовать PixelPanda бесплатно →
+            </a>
+          </div>
+        </div>
+      </div>
+
       {/* Progress Steps */}
       <div className="mb-8">
         <div className="flex items-center justify-between">
@@ -410,14 +436,47 @@ export default function CardCreator() {
         </div>
       )}
 
-      {/* Info */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-4">
-        <p className="text-sm text-blue-800">
-          <strong>💡 Совет:</strong> Для создания карточек как в Aidentika.com с полноценной ИИ генерацией 
-          (удаление фона, генерация окружения) необходимо подключить API генеративного ИИ 
-          (например, OpenAI DALL-E, Stability AI или Midjourney API). 
-          Текущая версия использует базовую обработку через Canvas API.
-        </p>
+      {/* Info - Бесплатная альтернатива */}
+      <div className="mt-8 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+        <div className="flex items-start gap-4">
+          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Sparkles size={24} className="text-purple-600" />
+          </div>
+          <div className="flex-1">
+            <h3 className="font-bold text-purple-900 mb-2">
+              🎨 Хотите карточки как в Aidentika.com? Бесплатно!
+            </h3>
+            <p className="text-sm text-purple-800 mb-4">
+              Используйте <strong>PixelPanda</strong> - бесплатный AI-генератор карточек товаров. 
+              3 генерации в день без регистрации, отличное качество, готово для Wildberries/Amazon/Shopify.
+            </p>
+            <div className="flex flex-wrap gap-3">
+              <a 
+                href="https://pixelpanda.ai/free-tools/ecommerce-product-photography"
+                target="_blank"
+                rel="noreferrer"
+                className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
+              >
+                Открыть PixelPanda (бесплатно) →
+              </a>
+              <div className="flex items-center gap-2 text-xs text-purple-600">
+                <CheckCircle2 size={14} />
+                <span>3 генерации/день</span>
+                <CheckCircle2 size={14} />
+                <span>Без регистрации</span>
+                <CheckCircle2 size={14} />
+                <span>10 профессиональных сцен</span>
+              </div>
+            </div>
+            <div className="mt-4 pt-4 border-t border-purple-200">
+              <p className="text-xs text-purple-700">
+                <strong>Другие бесплатные варианты:</strong> Hugging Face API (бесплатный API), 
+                WithoutBG (open-source), Stable Diffusion (локально). 
+                Подробнее в документации проекта.
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   );
