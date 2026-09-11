@@ -1,16 +1,8 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
 
 // Кэш в памяти серверной функции
-const cache = new Map<string, { data: any; timestamp: number }>();
+const cache = new Map();
 const CACHE_TTL = 10 * 60 * 1000; // 10 минут
-
-export const config = {
-  api: {
-    bodyParser: {
-      sizeLimit: '1mb',
-    },
-  },
-};
 
 export default async function handler(req: VercelRequest, res: VercelResponse) {
   // CORS
@@ -23,8 +15,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   );
 
   if (req.method === 'OPTIONS') {
-    res.status(200).end();
-    return;
+    return res.status(200).end();
   }
 
   if (req.method !== 'POST') {
@@ -32,13 +23,14 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
   }
 
   try {
-    const apiKey = req.headers.authorization?.replace('Bearer ', '');
+    const authHeader = req.headers.authorization || '';
+    const apiKey = authHeader.replace('Bearer ', '');
 
     if (!apiKey) {
       return res.status(401).json({ error: 'API ключ не предоставлен' });
     }
 
-    const { method, url, body } = req.body;
+    const { method, url, body } = req.body || {};
 
     if (!method || !url) {
       return res.status(400).json({ error: 'method и url обязательны' });
@@ -51,59 +43,69 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
     const cached = cache.get(cacheKey);
 
     if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
-      console.log('[wb-proxy] ✅ Cache HIT');
+      console.log('[wb-proxy] Cache HIT');
       return res.status(200).json({
-         cached.data,
+        data: cached.data,
         fromCache: true,
       });
     }
 
-    console.log('[wb-proxy] ❌ Cache MISS');
+    console.log('[wb-proxy] Cache MISS');
 
     // Формируем запрос к WB API
-    const wbRequestOptions: RequestInit = {
+    const fetchOptions: any = {
       method: method,
       headers: {
-        Authorization: apiKey,
+        'Authorization': apiKey,
         'Content-Type': 'application/json',
       },
     };
 
     if (body && method !== 'GET') {
-      wbRequestOptions.body = JSON.stringify(body);
+      fetchOptions.body = JSON.stringify(body);
     }
 
     // Запрос к WB API
-    const wbResponse = await fetch(url, wbRequestOptions);
+    const wbResponse = await fetch(url, fetchOptions);
 
     console.log(`[wb-proxy] WB API status: ${wbResponse.status}`);
 
+    // Получаем ответ как текст
+    const responseText = await wbResponse.text();
+
     // Если WB вернул ошибку — не кэшируем
     if (!wbResponse.ok) {
-      const errorText = await wbResponse.text();
       return res.status(wbResponse.status).json({
         error: 'Ошибка WB API',
-        details: errorText,
+        details: responseText,
       });
     }
 
-    const data = await wbResponse.json();
+    // Пытаемся распарсить как JSON
+    let data;
+    try {
+      data = JSON.parse(responseText);
+    } catch (e) {
+      // Если не JSON, возвращаем как есть
+      data = responseText;
+    }
 
     // Сохраняем в кэш
-    cache.set(cacheKey, { data: data, timestamp: Date.now() });
+    cache.set(cacheKey, { data, timestamp: Date.now() });
 
     // Ограничиваем размер кэша
     if (cache.size > 100) {
       const firstKey = cache.keys().next().value;
-      cache.delete(firstKey);
+      if (firstKey) cache.delete(firstKey);
     }
 
     return res.status(200).json({
-       data,
+      data: data,
       fromCache: false,
     });
   } catch (error: any) {
-    console.error('[wb-proxy] Ошибка:', error);
+    console.error('[wb-proxy] Ошибка:', error.message);
+    console.error('[wb-proxy] Stack:', error.stack);
     return res.status(500).json({
       error: 'Внутренняя ошибка сервера',
       details: error.message,
