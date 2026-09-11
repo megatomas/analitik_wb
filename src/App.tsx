@@ -10,6 +10,7 @@ import VercelDeploy from './components/VercelDeploy';
 import AuthPage from './components/AuthPage';
 import ApiSetup from './components/ApiSetup';
 import ProfileSettings from './components/ProfileSettings';
+import CardCreator from './components/CardCreator';
 import { Bell, Search, Menu, X, LogOut, Key, Settings } from 'lucide-react';
 import { notifications } from './data/mockData';
 
@@ -59,6 +60,8 @@ function AppContent() {
         return <AIChat />;
       case 'analytics':
         return <Analytics />;
+      case 'card-creator':
+        return <CardCreator />;
       case 'platforms':
         return <Platforms />;
       case 'deploy':
