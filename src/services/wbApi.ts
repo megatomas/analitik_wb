@@ -4,7 +4,7 @@ const WB_API_BASE = 'https://statistics-api.wildberries.ru/api/v1';
 
 // Кэш в памяти
 const memoryCache = new Map<string, { data: any; timestamp: number }>();
-const CACHE_TTL = 3 * 60 * 1000; // 3 минуты
+const CACHE_TTL = 5 * 60 * 1000; // 5 минут (увеличил для снижения нагрузки на WB API)
 
 export interface SalesData {
   revenue: number;
