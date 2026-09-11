@@ -138,7 +138,9 @@ export function useWBApi() {
       }
 
       const result = await response.json();
-      const data = result.data;
+      
+      // Vercel Function возвращает { data: ..., fromCache: ... }
+      const data = result.data !== undefined ? result.data : result;
       
       setCache(cacheKey, data);
       return data;
@@ -173,10 +175,13 @@ export function useWBApi() {
     dateFrom.setDate(dateFrom.getDate() - 60);
     const dateFromStr = dateFrom.toISOString().split('T')[0];
 
-    const sales = await fetchViaProxy(
+    const salesResponse = await fetchViaProxy(
       'GET',
       `${WB_API.sales}?dateFrom=${dateFromStr}`
     );
+    
+    // WB API для sales возвращает массив напрямую
+    const sales = Array.isArray(salesResponse) ? salesResponse : [];
 
     const now = new Date();
     const yesterday = new Date(now);
@@ -240,7 +245,9 @@ export function useWBApi() {
       { limit: 250000, offset: 0 }
     );
 
-    const items = response?.items || [];
+    // WB API для stocks возвращает { data: { items: [...] } }
+    // Но через proxy уже распаковано в data
+    const items = response?.items || response?.data?.items || [];
     setCache(cacheKey, items);
     return items;
   };
@@ -260,7 +267,8 @@ export function useWBApi() {
         { limit: 250000, offset: 0 }
       );
 
-      const items = response?.items || [];
+      // WB API для stocks возвращает { data: { items: [...] } }
+      const items = response?.items || response?.data?.items || [];
       setCache(cacheKey, items);
       return items;
     } catch (error) {
@@ -280,7 +288,7 @@ export function useWBApi() {
     }
 
     // Получаем остатки и продажи параллельно
-    const [stocksWB, stocksSeller, sales] = await Promise.all([
+    const [stocksWB, stocksSeller, salesResponse] = await Promise.all([
       getStocksWB(),
       getStocksSeller(),
       fetchViaProxy(
@@ -288,6 +296,9 @@ export function useWBApi() {
         `${WB_API.sales}?dateFrom=${new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]}`
       ),
     ]);
+    
+    // WB API для sales возвращает массив напрямую
+    const sales = Array.isArray(salesResponse) ? salesResponse : [];
 
     // Группируем остатки на складах WB по товарам
     const productStocksWB = new Map<number, number>();
