@@ -89,7 +89,11 @@ export default function AIChat() {
         if (critical.length > 0) {
           response += `🔴 **КРИТИЧНО (${critical.length} товаров):**\n`;
           critical.slice(0, 5).forEach(rec => {
-            response += `• ${rec.productName}\n`;
+            response += `• **${rec.productName}**\n`;
+            response += `  WB: ${rec.productId}`;
+            if (rec.vendorCode) response += ` | Продавец: ${rec.vendorCode}`;
+            if (rec.barcode) response += ` | Баркод: ${rec.barcode}`;
+            response += `\n`;
             response += `  Остаток WB: ${rec.currentStockWB} шт. | Склад продавца: ${rec.currentStockSeller} шт.\n`;
             response += `  ${rec.reason}\n`;
             if (rec.recommendedOrder > 0) {
@@ -102,7 +106,9 @@ export default function AIChat() {
         if (warning.length > 0) {
           response += `🟡 **ВНИМАНИЕ (${warning.length} товаров):**\n`;
           warning.slice(0, 3).forEach(rec => {
-            response += `• ${rec.productName} - ${rec.reason}\n`;
+            response += `• **${rec.productName}** (WB: ${rec.productId}`;
+            if (rec.vendorCode) response += `, ${rec.vendorCode}`;
+            response += `) - ${rec.reason}\n`;
           });
         }
 
