@@ -5,6 +5,7 @@ interface User {
   email: string;
   name: string;
   wbApiKey?: string;
+  apiKeyCreatedAt?: string;
   createdAt: string;
 }
 
@@ -80,7 +81,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     await new Promise(resolve => setTimeout(resolve, 500));
     
-    const updatedUser = { ...user, wbApiKey: apiKey };
+    const updatedUser = { 
+      ...user, 
+      wbApiKey: apiKey || undefined,
+      apiKeyCreatedAt: apiKey ? new Date().toISOString() : undefined
+    };
     setUser(updatedUser);
     localStorage.setItem('wb_analytics_user', JSON.stringify(updatedUser));
     return true;
