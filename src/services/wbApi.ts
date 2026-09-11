@@ -67,14 +67,30 @@ export function useWBApi() {
     console.log(`[WB API] Запрос: ${endpoint}`);
 
     try {
-      // Пытаемся через наш серверный прокси (Vercel Functions)
-      const response = await fetch(`/api/wb-proxy?endpoint=${encodeURIComponent(endpoint)}`, {
-        method: 'GET',
-        headers: {
-          'Authorization': `Bearer ${user.wbApiKey}`,
-          'Content-Type': 'application/json',
-        },
-      });
+      // PWA: прямые запросы к WB API (с устройства пользователя)
+      // Vercel: через серверный прокси (если PWA не установлен)
+      const isPWA = window.matchMedia('(display-mode: standalone)').matches;
+      
+      let response;
+      
+      if (isPWA) {
+        // Прямой запрос к WB API (PWA режим)
+        response = await fetch(`https://statistics-api.wildberries.ru${endpoint}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': user.wbApiKey,
+          },
+        });
+      } else {
+        // Через серверный прокси (браузер режим)
+        response = await fetch(`/api/wb-proxy?endpoint=${encodeURIComponent(endpoint)}`, {
+          method: 'GET',
+          headers: {
+            'Authorization': `Bearer ${user.wbApiKey}`,
+            'Content-Type': 'application/json',
+          },
+        });
+      }
 
       console.log(`[WB API] Статус: ${response.status}`);
 
