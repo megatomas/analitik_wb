@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Send, Bot, User, Sparkles, MessageSquare } from 'lucide-react';
-import { aiResponses } from '../data/mockData';
+import { useWBApi } from '../services/wbApi';
+import { useAuth } from '../contexts/AuthContext';
 
 interface Message {
   id: number;
@@ -17,10 +18,12 @@ const quickActions = [
 ];
 
 export default function AIChat() {
+  const { user } = useAuth();
+  const { getSales, getStockRecommendations } = useWBApi();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: 0,
-      text: aiResponses.greeting,
+      text: 'Привет! Я ваш ИИ-аналитик продаж на Wildberries. Могу помочь с анализом продаж, рекомендациями по остаткам и прогнозами. Что вас интересует?',
       sender: 'ai',
       timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
     },
@@ -33,7 +36,105 @@ export default function AIChat() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = (text?: string) => {
+  // Генерация ответа на основе реальных данных
+  const generateResponse = async (query: string): Promise<string> => {
+    const lowerQuery = query.toLowerCase();
+
+    try {
+      // Запрос о продажах
+      if (lowerQuery.includes('продаж') || lowerQuery.includes('выруч') || lowerQuery.includes('сводк')) {
+        const salesData = await getSales();
+        const yesterday = salesData.yesterday;
+        const week = salesData.week;
+        const month = salesData.month;
+
+        return `📊 **Сводка продаж из вашего кабинета WB:**\n\n` +
+          `**Вчера:**\n` +
+          `• Выручка: ${yesterday.revenue.toLocaleString('ru-RU')} ₽\n` +
+          `• Заказов: ${yesterday.orders}\n` +
+          `• Средний чек: ${yesterday.avgCheck.toLocaleString('ru-RU')} ₽\n` +
+          `• Возвратов: ${yesterday.returns}\n\n` +
+          `**За неделю:**\n` +
+          `• Выручка: ${week.revenue.toLocaleString('ru-RU')} ₽\n` +
+          `• Заказов: ${week.orders}\n` +
+          `• Средний чек: ${week.avgCheck.toLocaleString('ru-RU')} ₽\n\n` +
+          `**За месяц:**\n` +
+          `• Выручка: ${month.revenue.toLocaleString('ru-RU')} ₽\n` +
+          `• Заказов: ${month.orders}\n` +
+          `• Средний чек: ${month.avgCheck.toLocaleString('ru-RU')} ₽\n\n` +
+          `💡 Данные получены из вашего кабинета Wildberries в реальном времени.`;
+      }
+
+      // Запрос об остатках
+      if (lowerQuery.includes('остат') || lowerQuery.includes('пополн') || lowerQuery.includes('запас')) {
+        const recommendations = await getStockRecommendations();
+        const critical = recommendations.filter(r => r.urgency === 'critical');
+        const warning = recommendations.filter(r => r.urgency === 'warning');
+
+        let response = `📦 **Рекомендации по пополнению из вашего кабинета WB:**\n\n`;
+
+        if (critical.length > 0) {
+          response += `🔴 **КРИТИЧНО (${critical.length} товаров):**\n`;
+          critical.slice(0, 5).forEach(rec => {
+            response += `• ${rec.productName}\n`;
+            response += `  Остаток WB: ${rec.currentStockWB} шт. | Склад продавца: ${rec.currentStockSeller} шт.\n`;
+            response += `  ${rec.reason}\n`;
+            if (rec.recommendedOrder > 0) {
+              response += `  ➡️ Заказать: ${rec.recommendedOrder} шт.\n`;
+            }
+            response += `\n`;
+          });
+        }
+
+        if (warning.length > 0) {
+          response += `🟡 **ВНИМАНИЕ (${warning.length} товаров):**\n`;
+          warning.slice(0, 3).forEach(rec => {
+            response += `• ${rec.productName} - ${rec.reason}\n`;
+          });
+        }
+
+        if (critical.length === 0 && warning.length === 0) {
+          response += `✅ Все товары в норме! Критических остатков не обнаружено.`;
+        }
+
+        response += `\n💡 Данные получены из вашего кабинета Wildberries.`;
+        return response;
+      }
+
+      // Прогноз
+      if (lowerQuery.includes('прогноз') || lowerQuery.includes('будет') || lowerQuery.includes('ожид')) {
+        const salesData = await getSales();
+        const month = salesData.month;
+        const week = salesData.week;
+
+        // Простой прогноз на основе средних значений
+        const avgDailyRevenue = month.revenue / 30;
+        const avgDailyOrders = month.orders / 30;
+        const forecastRevenue = Math.round(avgDailyRevenue * 7);
+        const forecastOrders = Math.round(avgDailyOrders * 7);
+
+        return `🔮 **Прогноз на следующую неделю:**\n\n` +
+          `На основе данных из вашего кабинета WB:\n\n` +
+          `• Ожидаемая выручка: ${forecastRevenue.toLocaleString('ru-RU')} ₽\n` +
+          `• Ожидаемые заказы: ${forecastOrders}\n` +
+          `• Средний дневной доход: ${Math.round(avgDailyRevenue).toLocaleString('ru-RU')} ₽\n\n` +
+          `💡 Прогноз основан на данных за последний месяц из вашего кабинета Wildberries.`;
+      }
+
+      // По умолчанию
+      return `Я могу помочь вам с:\n\n` +
+        `📊 **Анализом продаж** - спросите "как продажи?"\n` +
+        `📦 **Рекомендациями по остаткам** - спросите "что пополнить?"\n` +
+        `🔮 **Прогнозами** - спросите "прогноз на неделю"\n\n` +
+        `Все данные берутся из вашего кабинета Wildberries в реальном времени.`;
+
+    } catch (error) {
+      console.error('Ошибка генерации ответа:', error);
+      return `⚠️ Не удалось получить данные из WB API. Проверьте подключение API-ключа в настройках профиля.`;
+    }
+  };
+
+  const handleSend = async (text?: string) => {
     const messageText = text || input;
     if (!messageText.trim()) return;
 
@@ -48,28 +149,30 @@ export default function AIChat() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response
-    setTimeout(() => {
-      let responseKey = 'default';
-      const lower = messageText.toLowerCase();
-      if (lower.includes('продаж') || lower.includes('выруч') || lower.includes('сводк')) {
-        responseKey = 'sales';
-      } else if (lower.includes('остат') || lower.includes('пополн') || lower.includes('запас')) {
-        responseKey = 'stock';
-      } else if (lower.includes('прогноз') || lower.includes('будет') || lower.includes('ожид')) {
-        responseKey = 'forecast';
-      }
+    // Генерируем ответ на основе реальных данных
+    try {
+      const responseText = await generateResponse(messageText);
 
       const aiMsg: Message = {
         id: messages.length + 2,
-        text: aiResponses[responseKey],
+        text: responseText,
         sender: 'ai',
         timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
       };
 
       setMessages((prev) => [...prev, aiMsg]);
+    } catch (error) {
+      console.error('Ошибка:', error);
+      const errorMsg: Message = {
+        id: messages.length + 2,
+        text: '⚠️ Произошла ошибка при получении данных. Попробуйте ещё раз.',
+        sender: 'ai',
+        timestamp: new Date().toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' }),
+      };
+      setMessages((prev) => [...prev, errorMsg]);
+    } finally {
       setIsTyping(false);
-    }, 1200);
+    }
   };
 
   return (
