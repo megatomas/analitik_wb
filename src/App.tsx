@@ -5,6 +5,7 @@ import StockRecommendations from './components/StockRecommendations';
 import AIChat from './components/AIChat';
 import Analytics from './components/Analytics';
 import Platforms from './components/Platforms';
+import DeployGuide from './components/DeployGuide';
 import { Bell, Search, Menu, X } from 'lucide-react';
 import { notifications } from './data/mockData';
 
@@ -27,6 +28,8 @@ export default function App() {
         return <Analytics />;
       case 'platforms':
         return <Platforms />;
+      case 'deploy':
+        return <DeployGuide />;
       default:
         return <Dashboard period={period} setPeriod={setPeriod} />;
     }

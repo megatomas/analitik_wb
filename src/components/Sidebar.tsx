@@ -12,6 +12,7 @@ import {
   ChevronLeft,
   ChevronRight,
   TrendingUp,
+  Rocket,
 } from 'lucide-react';
 
 interface SidebarProps {
@@ -27,6 +28,7 @@ const menuItems = [
   { id: 'ai', icon: Bot, label: 'ИИ Аналитик' },
   { id: 'analytics', icon: BarChart3, label: 'Аналитика' },
   { id: 'platforms', icon: Globe, label: 'Платформы' },
+  { id: 'deploy', icon: Rocket, label: 'Деплой' },
 ];
 
 export default function Sidebar({ activeTab, setActiveTab, collapsed, setCollapsed }: SidebarProps) {
