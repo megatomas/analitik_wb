@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { Key, Eye, EyeOff, CheckCircle2, AlertCircle, ExternalLink, Loader2, ArrowRight, Shield, Zap, BookOpen } from 'lucide-react';
+import { Key, Eye, EyeOff, CheckCircle2, AlertCircle, ExternalLink, Loader2, ArrowRight, Shield, Zap, BookOpen, Check, AlertTriangle } from 'lucide-react';
 
 interface ApiSetupProps {
   onComplete: () => void;
@@ -162,7 +162,9 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
             <BookOpen size={16} className="text-purple-600" />
             Как получить API-ключ?
           </h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          
+          {/* Step-by-step guide */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
             {[
               {
                 step: '1',
@@ -201,6 +203,95 @@ export default function ApiSetup({ onComplete, onSkip }: ApiSetupProps) {
                 )}
               </div>
             ))}
+          </div>
+
+          {/* Detailed API Key Settings */}
+          <div className="border-t border-gray-200 pt-6">
+            <h5 className="font-semibold text-gray-800 mb-3 flex items-center gap-2">
+              <Zap size={16} className="text-amber-600" />
+              Настройки при создании ключа
+            </h5>
+            
+            <div className="space-y-4">
+              {/* Token Type */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-blue-900 mb-2">🔑 Тип токена:</p>
+                <div className="bg-white rounded-lg p-3 border border-blue-100">
+                  <p className="text-sm font-bold text-blue-800">Базовый токен</p>
+                  <p className="text-xs text-blue-700 mt-1">
+                    Для ручного подключения внешних сервисов
+                  </p>
+                </div>
+              </div>
+
+              {/* Categories */}
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-green-900 mb-2">📊 Категории данных (отметьте галочками):</p>
+                <div className="space-y-2">
+                  {[
+                    { name: 'Статистика', required: true, desc: 'Данные о продажах, заказах, браках' },
+                    { name: 'Товары', required: true, desc: 'Информация об остатках на складах' },
+                    { name: 'Контент', required: false, desc: 'Данные карточек товаров (опционально)' },
+                    { name: 'Аналитика', required: false, desc: 'Расширенная аналитика (если доступна)' },
+                  ].map((cat) => (
+                    <div key={cat.name} className="flex items-start gap-3 bg-white rounded-lg p-3 border border-green-100">
+                      <div className={`w-5 h-5 rounded flex items-center justify-center flex-shrink-0 mt-0.5 ${
+                        cat.required ? 'bg-green-500' : 'bg-gray-300'
+                      }`}>
+                        {cat.required && <Check size={12} className="text-white" />}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-medium text-gray-800">{cat.name}</p>
+                          {cat.required && (
+                            <span className="text-[10px] bg-green-100 text-green-700 px-1.5 py-0.5 rounded font-medium">
+                              Обязательно
+                            </span>
+                          )}
+                        </div>
+                        <p className="text-xs text-gray-600 mt-0.5">{cat.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Access Level */}
+              <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-purple-900 mb-2">🔒 Уровень доступа:</p>
+                <div className="bg-white rounded-lg p-3 border border-purple-100">
+                  <p className="text-sm font-bold text-purple-800">Только чтение</p>
+                  <p className="text-xs text-purple-700 mt-1">
+                    ⚠️ НЕ выбирайте "Чтение и запись" — нам не нужно менять данные в вашем кабинете
+                  </p>
+                </div>
+              </div>
+
+              {/* Token Name */}
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+                <p className="text-sm font-medium text-amber-900 mb-2">📝 Название токена:</p>
+                <div className="bg-white rounded-lg p-3 border border-amber-100">
+                  <code className="text-sm font-mono text-amber-800">WB Analytics Pro</code>
+                  <p className="text-xs text-amber-700 mt-1">
+                    Используйте понятное название, чтобы потом легко найти этот токен в списке
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Security Note */}
+            <div className="mt-4 bg-red-50 border border-red-200 rounded-xl p-4">
+              <p className="text-sm font-medium text-red-900 mb-2 flex items-center gap-2">
+                <AlertTriangle size={16} className="text-red-600" />
+                Важно о безопасности
+              </p>
+              <ul className="text-xs text-red-800 space-y-1">
+                <li>• Ключ показывается только один раз при создании — сразу скопируйте его</li>
+                <li>• Не передавайте ключ третьим лицам и не публикуйте в открытых источниках</li>
+                <li>• Мы храним ключ в зашифрованном виде и используем только для запросов к WB API</li>
+                <li>• Вы можете отозвать доступ в любой момент в настройках кабинета WB</li>
+              </ul>
+            </div>
           </div>
         </div>
 
