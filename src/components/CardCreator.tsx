@@ -23,91 +23,91 @@ export default function CardCreator() {
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  // Стили карточек с профессиональными промптами
+  // Стили карточек с оптимизированными промптами (короткие, эффективные)
   const styles: Style[] = [
     {
       id: 'cosmetics',
       name: 'Косметика',
       description: 'Элегантный стиль для косметики и ухода',
       icon: '💄',
-      prompt: 'luxury cosmetics product photography, elegant marble surface, soft pink lighting, premium beauty brand, professional studio shot, 8k resolution, high-end aesthetic, minimalist composition'
+      prompt: 'luxury cosmetics photography, marble surface, soft pink lighting, premium beauty, studio shot, 8k, high-end, minimalist'
     },
     {
       id: 'electronics',
       name: 'Электроника',
       description: 'Современный стиль для гаджетов',
       icon: '📱',
-      prompt: 'modern electronics product photography, sleek dark background, dramatic blue accent lighting, tech gadget showcase, professional studio shot, 8k resolution, futuristic aesthetic, clean composition'
+      prompt: 'modern electronics photography, dark background, blue accent lighting, tech showcase, studio shot, 8k, futuristic, clean'
     },
     {
       id: 'fashion',
       name: 'Одежда',
       description: 'Стильный образ для моды',
       icon: '👗',
-      prompt: 'fashion product photography, stylish clothing display, neutral beige background, soft natural lighting, editorial style shot, 8k resolution, trendy aesthetic, professional composition'
+      prompt: 'fashion photography, stylish display, beige background, soft natural lighting, editorial style, 8k, trendy, professional'
     },
     {
       id: 'food',
       name: 'Продукты питания',
       description: 'Аппетитный стиль для еды',
       icon: '🍕',
-      prompt: 'appetizing food product photography, rustic wooden surface, warm golden lighting, fresh ingredients visible, professional food styling, 8k resolution, inviting aesthetic, close-up composition'
+      prompt: 'appetizing food photography, wooden surface, warm golden lighting, fresh ingredients, food styling, 8k, inviting, close-up'
     },
     {
       id: 'sports',
       name: 'Спорт',
       description: 'Динамичный стиль для спорта',
       icon: '⚽',
-      prompt: 'dynamic sports product photography, energetic composition, vibrant background, action-oriented lighting, athletic brand aesthetic, 8k resolution, powerful visual, professional shot'
+      prompt: 'dynamic sports photography, energetic composition, vibrant background, action lighting, athletic brand, 8k, powerful, professional'
     },
     {
       id: 'home',
       name: 'Дом и сад',
       description: 'Уютный стиль для дома',
       icon: '🏠',
-      prompt: 'cozy home product photography, warm interior setting, natural daylight, lifestyle composition, comfortable aesthetic, 8k resolution, inviting atmosphere, professional shot'
+      prompt: 'cozy home photography, warm interior, natural daylight, lifestyle composition, comfortable aesthetic, 8k, inviting, professional'
     },
     {
       id: 'auto',
       name: 'Автотовары',
       description: 'Премиум стиль для авто',
       icon: '🚗',
-      prompt: 'premium automotive product photography, sleek metallic surface, dramatic lighting, luxury car accessories showcase, professional studio shot, 8k resolution, high-end aesthetic, sophisticated composition'
+      prompt: 'premium automotive photography, metallic surface, dramatic lighting, luxury accessories, studio shot, 8k, high-end, sophisticated'
     },
     {
       id: 'kids',
       name: 'Детские товары',
       description: 'Яркий стиль для детей',
       icon: '🧸',
-      prompt: 'cheerful kids product photography, bright playful colors, fun composition, child-friendly aesthetic, professional studio shot, 8k resolution, joyful atmosphere, engaging visual'
+      prompt: 'cheerful kids photography, bright playful colors, fun composition, child-friendly, studio shot, 8k, joyful, engaging'
     },
     {
       id: 'premium',
       name: 'Премиум',
       description: 'Люксовый стиль для дорогих товаров',
       icon: '💎',
-      prompt: 'luxury premium product photography, elegant black and gold theme, dramatic spotlight lighting, exclusive brand aesthetic, professional studio shot, 8k resolution, sophisticated composition, high-end visual'
+      prompt: 'luxury premium photography, black and gold theme, spotlight lighting, exclusive brand, studio shot, 8k, sophisticated, high-end'
     },
     {
       id: 'eco',
       name: 'Эко товары',
       description: 'Натуральный стиль для эко',
       icon: '🌿',
-      prompt: 'eco-friendly product photography, natural green setting, organic materials visible, sustainable brand aesthetic, soft natural lighting, 8k resolution, earthy tones, professional composition'
+      prompt: 'eco-friendly photography, natural green setting, organic materials, sustainable brand, soft natural lighting, 8k, earthy tones'
     },
     {
       id: 'tech',
       name: 'Технологии',
       description: 'Футуристичный стиль для tech',
       icon: '🔬',
-      prompt: 'cutting-edge technology product photography, futuristic holographic elements, neon accent lighting, innovative design showcase, professional studio shot, 8k resolution, modern aesthetic, clean composition'
+      prompt: 'technology photography, futuristic elements, neon accent lighting, innovative design, studio shot, 8k, modern, clean composition'
     },
     {
       id: 'minimal',
       name: 'Минимализм',
       description: 'Чистый минималистичный стиль',
       icon: '⚪',
-      prompt: 'minimalist product photography, pure white background, clean simple composition, soft diffused lighting, Scandinavian aesthetic, 8k resolution, professional shot, elegant simplicity'
+      prompt: 'minimalist photography, pure white background, clean composition, soft diffused lighting, Scandinavian aesthetic, 8k, elegant simplicity'
     },
   ];
 
@@ -133,6 +133,23 @@ export default function CardCreator() {
     reader.readAsDataURL(file);
   };
 
+  // Простая транслитерация кириллицы в латиницу
+  const transliterate = (text: string): string => {
+    const map: Record<string, string> = {
+      'а': 'a', 'б': 'b', 'в': 'v', 'г': 'g', 'д': 'd', 'е': 'e', 'ё': 'yo',
+      'ж': 'zh', 'з': 'z', 'и': 'i', 'й': 'y', 'к': 'k', 'л': 'l', 'м': 'm',
+      'н': 'n', 'о': 'o', 'п': 'p', 'р': 'r', 'с': 's', 'т': 't', 'у': 'u',
+      'ф': 'f', 'х': 'kh', 'ц': 'ts', 'ч': 'ch', 'ш': 'sh', 'щ': 'sch',
+      'ъ': '', 'ы': 'y', 'ь': '', 'э': 'e', 'ю': 'yu', 'я': 'ya',
+      'А': 'A', 'Б': 'B', 'В': 'V', 'Г': 'G', 'Д': 'D', 'Е': 'E', 'Ё': 'Yo',
+      'Ж': 'Zh', 'З': 'Z', 'И': 'I', 'Й': 'Y', 'К': 'K', 'Л': 'L', 'М': 'M',
+      'Н': 'N', 'О': 'O', 'П': 'P', 'Р': 'R', 'С': 'S', 'Т': 'T', 'У': 'U',
+      'Ф': 'F', 'Х': 'Kh', 'Ц': 'Ts', 'Ч': 'Ch', 'Ш': 'Sh', 'Щ': 'Sch',
+      'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
+    };
+    return text.split('').map(c => map[c] || c).join('');
+  };
+
   const generateCard = async () => {
     if (!selectedImage || !selectedStyle) return;
 
@@ -140,32 +157,92 @@ export default function CardCreator() {
     setError(null);
 
     try {
-      // Формируем промпт на основе стиля и информации о товаре
+      // Формируем промпт - только английский, короткий
       let fullPrompt = selectedStyle.prompt;
       
+      // Добавляем название товара (транслитерируем кириллицу)
       if (infographicData.title) {
-        fullPrompt += `, featuring ${infographicData.title}`;
+        const transliteratedTitle = transliterate(infographicData.title);
+        // Берём только первые 3 слова чтобы не раздувать промпт
+        const shortTitle = transliteratedTitle.split(' ').slice(0, 3).join(' ');
+        fullPrompt += `, featuring ${shortTitle}`;
       }
       
+      // Добавляем особенности (транслитерируем и сокращаем)
       if (infographicData.features) {
-        fullPrompt += `, showcasing ${infographicData.features}`;
+        const transliteratedFeatures = transliterate(infographicData.features);
+        // Берём только первые 5 слов
+        const shortFeatures = transliteratedFeatures.split(/[,\s]+/).slice(0, 5).join(' ');
+        fullPrompt += `, ${shortFeatures}`;
       }
 
-      fullPrompt += ', product centered, professional e-commerce photography, ready for marketplace listing';
+      fullPrompt += ', product centered, e-commerce photo';
 
-      // Генерируем изображение через Pollinations AI
-      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=900&height=1200&nologo=true&model=flux&seed=${Date.now()}`;
-      
-      console.log('Генерация карточки:', imageUrl);
-
-      // Загружаем сгенерированное изображение
-      const response = await fetch(imageUrl);
-      
-      if (!response.ok) {
-        throw new Error('Не удалось сгенерировать изображение');
+      // Ограничиваем длину промпта до 300 символов
+      if (fullPrompt.length > 300) {
+        fullPrompt = fullPrompt.substring(0, 300);
       }
 
-      const imageBlob = await response.blob();
+      console.log('Промпт:', fullPrompt);
+      console.log('Длина промпта:', fullPrompt.length);
+
+      // Генерируем изображение через Pollinations AI с повторными попытками
+      let imageBlob: Blob | null = null;
+      let lastError: Error | null = null;
+
+      for (let attempt = 1; attempt <= 3; attempt++) {
+        try {
+          const seed = Date.now() + attempt;
+          const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=900&height=1200&nologo=true&model=flux&seed=${seed}`;
+          
+          console.log(`Попытка ${attempt}: ${imageUrl}`);
+
+          const response = await fetch(imageUrl, {
+            signal: AbortSignal.timeout(60000), // Таймаут 60 секунд
+          });
+          
+          if (response.ok) {
+            imageBlob = await response.blob();
+            console.log(`Успешная генерация на попытке ${attempt}`);
+            break;
+          } else {
+            lastError = new Error(`HTTP ${response.status}`);
+            console.warn(`Попытка ${attempt} не удалась: HTTP ${response.status}`);
+            // Ждём перед следующей попыткой
+            if (attempt < 3) {
+              await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+            }
+          }
+        } catch (err: any) {
+          lastError = err;
+          console.warn(`Попытка ${attempt} не удалась:`, err.message);
+          if (attempt < 3) {
+            await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+          }
+        }
+      }
+
+      // Если основной endpoint не сработал, пробуем альтернативный
+      if (!imageBlob) {
+        console.log('Пробуем альтернативный endpoint...');
+        try {
+          const altUrl = `https://pollinations.ai/p/${encodeURIComponent(fullPrompt)}?width=900&height=1200&nologo=true`;
+          const altResponse = await fetch(altUrl, {
+            signal: AbortSignal.timeout(60000),
+          });
+          if (altResponse.ok) {
+            imageBlob = await altResponse.blob();
+            console.log('Альтернативный endpoint сработал');
+          }
+        } catch (altErr) {
+          console.warn('Альтернативный endpoint тоже не сработал:', altErr);
+        }
+      }
+
+      if (!imageBlob) {
+        throw new Error(`Не удалось сгенерировать изображение. Попробуйте ещё раз или выберите другой стиль.`);
+      }
+
       const generatedUrl = URL.createObjectURL(imageBlob);
 
       // Создаем canvas для добавления инфографики
@@ -485,7 +562,30 @@ export default function CardCreator() {
         <div className="mt-4 bg-red-50 border border-red-200 rounded-lg p-4">
           <div className="flex items-start gap-3">
             <AlertCircle size={20} className="text-red-600 mt-0.5" />
-            <p className="text-sm text-red-800">{error}</p>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800 mb-2">{error}</p>
+              <div className="flex gap-2">
+                <button
+                  onClick={generateCard}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
+                >
+                  🔄 Попробовать снова
+                </button>
+                <button
+                  onClick={() => {
+                    setError(null);
+                    setSelectedStyle(null);
+                    setStep(2);
+                  }}
+                  className="px-4 py-2 border border-red-300 text-red-700 rounded-lg hover:bg-red-100 text-sm font-medium"
+                >
+                  Выбрать другой стиль
+                </button>
+              </div>
+              <p className="text-xs text-red-600 mt-2">
+                💡 Совет: Если ошибка повторяется, попробуйте выбрать другой стиль или упростить описание товара.
+              </p>
+            </div>
           </div>
         </div>
       )}
