@@ -1,276 +1,193 @@
-# 🎉 WB Analytics Pro - Финальная версия
+# 🚀 WB Analytics Pro
 
-## ✅ Что реализовано
+Полноценный сервис аналитики продаж для Wildberries с ИИ-генерацией карточек товаров.
 
-### 1. Интеграция с Wildberries API
-- ✅ Подключение через Vercel Serverless Functions (без Cloudflare)
-- ✅ Поддержка **персонального токена** WB API
-- ✅ Получение данных о продажах
-- ✅ Получение остатков на **складах WB**
-- ✅ Получение остатков на **складах продавца**
-- ✅ Умные рекомендации по пополнению с учётом обоих складов
+## ✨ Возможности
 
-### 2. API Endpoints
-Используются правильные URL для WB API:
+- 📊 **Аналитика продаж** - сводки за день, неделю, месяц
+- 📦 **Умные рекомендации** - расчет остатков на складах WB и продавца
+- 🤖 **ИИ-аналитик** - анализ данных и рекомендации
+- 🎨 **ИИ-генерация карточек** - создание продающих фото товаров
+- 🔐 **Безопасность** - JWT авторизация, защита API ключей
+- 💾 **База данных** - PostgreSQL для хранения данных
+- 🌐 **Кроссплатформенность** - Web, Mobile, Telegram Bot
 
-**Продажи:**
+## 🏗️ Архитектура
+
 ```
-GET https://statistics-api.wildberries.ru/api/v1/supplier/sales
-```
-
-**Остатки на складах WB:**
-```
-POST https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/wb-warehouses
-Body: { "limit": 250000, "offset": 0 }
-```
-
-**Остатки на складах продавца:**
-```
-POST https://seller-analytics-api.wildberries.ru/api/analytics/v1/stocks-report/seller-warehouses
-Body: { "limit": 250000, "offset": 0 }
+Frontend (React + Vite)
+    ↓
+Backend (Node.js + Express)
+    ↓
+PostgreSQL Database
+    ↓
+External APIs (WB API, Hugging Face)
 ```
 
-### 3. Архитектура
-```
-┌─────────────┐
-│   Browser   │
-│   (React)   │
-└──────┬──────┘
-       │
-       │ POST /api/wb-proxy
-       │ { method, url, body }
-       ▼
-┌─────────────────┐
-│ Vercel Function │
-│  (wb-proxy.ts)  │
-│                 │
-│  • Кэширование  │
-│  • CORS         │
-│  • Безопасность │
-└──────┬──────────┘
-       │
-       │ Authorization: Bearer <token>
-       ▼
-┌─────────────────┐
-│   WB API        │
-│  (Statistics)   │
-│  (Analytics)    │
-└─────────────────┘
-```
+## 🚀 Быстрый старт
 
-### 4. Кэширование
-- **Серверный кэш** (Vercel Function): 10 минут
-- **Клиентский кэш** (Browser): 5 минут
-- Снижает нагрузку на WB API
-- Предотвращает ошибку 429
+### Локальная разработка
 
-### 5. Компоненты
+Смотрите [LOCAL_DEV_GUIDE.md](./LOCAL_DEV_GUIDE.md)
 
-#### Dashboard
-- Сводка продаж за вчера/неделю/месяц
-- Выручка, заказы, средний чек
-- Возвраты и конверсия
-- График динамики продаж
-- Топ товаров
+### Развертывание на Timeweb Cloud
 
-#### Stock Recommendations
-- Рекомендации по пополнению остатков
-- Учёт остатков на **складах WB** и **складах продавца**
-- Приоритизация: критично/внимание/норма
-- Расчёт дней до обнуления
-- Рекомендации по количеству заказа
+Смотрите [TIMEWEB_DEPLOYMENT.md](./TIMEWEB_DEPLOYMENT.md)
 
-#### AI Chat
-- Бесплатный ИИ-аналитик
-- Анализ продаж
-- Рекомендации по остаткам
-- Прогнозы
-
-#### Analytics
-- Детальная аналитика
-- Графики и метрики
-- Сравнение с конкурентами
-
-#### Platforms
-- Информация о кроссплатформенности
-- Web, Mobile, Telegram Bot
-
-#### Deploy
-- Инструкция по развёртыванию на Vercel
-- Пошаговое руководство
-
-#### Profile Settings
-- Управление профилем
-- Смена API-ключа
-- Информация о сроке действия ключа
-
-## 🚀 Как развернуть
-
-### 1. Клонировать репозиторий
-```bash
-git clone <your-repo-url>
-cd wb-analytics
-```
-
-### 2. Установить зависимости
-```bash
-npm install
-```
-
-### 3. Развернуть на Vercel
-```bash
-npm i -g vercel
-vercel
-```
-
-Или через GitHub:
-1. Запушить код в репозиторий
-2. Подключить репозиторий к Vercel
-3. Vercel автоматически задеплоит
-
-### 4. Настроить переменные окружения (опционально)
-Если используете Supabase для хранения пользователей:
-```
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
-
-## 🔑 Как получить API-ключ Wildberries
-
-### Шаг 1: Войти в личный кабинет WB
-Откройте https://seller.wildberries.ru
-
-### Шаг 2: Перейти в раздел API
-Настройки → Доступ к API
-
-### Шаг 3: Создать персональный токен
-**ВАЖНО:** Нужен именно **персональный токен**, обычный токен не работает!
-
-### Шаг 4: Настроить права доступа
-Отметьте категории:
-- ✅ **Статистика** (обязательно) - данные о продажах
-- ✅ **Аналитика** (обязательно) - остатки на складах
-- ⬜ Остальные категории по желанию
-
-### Шаг 5: Уровень доступа
-Выберите **"Только чтение"**
-
-### Шаг 6: Название токена
-Укажите понятное название, например: `WB Analytics Pro`
-
-### Шаг 7: Скопировать токен
-Токен показывается только один раз! Сразу скопируйте и сохраните.
-
-## 📊 Структура проекта
+## 📁 Структура проекта
 
 ```
 wb-analytics/
-├── api/
-│   └── wb-proxy.ts          # Vercel Serverless Function
-├── src/
-│   ├── components/
-│   │   ├── Dashboard.tsx
-│   │   ├── StockRecommendations.tsx
-│   │   ├── AIChat.tsx
-│   │   ├── Analytics.tsx
-│   │   ├── Platforms.tsx
-│   │   ├── VercelDeploy.tsx
-│   │   ├── ProfileSettings.tsx
-│   │   ├── ApiSetup.tsx
-│   │   ├── AuthPage.tsx
-│   │   └── Sidebar.tsx
-│   ├── contexts/
-│   │   └── AuthContext.tsx
-│   ├── services/
-│   │   └── wbApi.ts         # API клиент
-│   ├── data/
-│   │   └── mockData.ts
-│   ├── App.tsx
-│   └── main.tsx
-├── package.json
-├── vercel.json
-└── README.md
+├── server/              # Backend (Express + PostgreSQL)
+│   └── index.js        # API сервер
+├── src/                # Frontend (React + TypeScript)
+│   ├── components/     # React компоненты
+│   ├── contexts/       # Контексты (Auth)
+│   ├── services/       # API сервисы
+│   └── App.tsx         # Главный компонент
+├── scripts/            # Скрипты автоматизации
+│   ├── init-db.js     # Инициализация БД
+│   └── deploy-timeweb.sh  # Деплой на Timeweb
+├── ecosystem.config.js # Конфигурация PM2
+├── nginx.conf          # Конфигурация Nginx
+├── .env.example        # Пример переменных окружения
+└── package.json        # Зависимости и скрипты
 ```
 
-## 🔒 Безопасность
+## 🛠️ Технологии
 
-- API-ключ хранится в localStorage браузера
-- Все запросы к WB API идут через Vercel Function
-- Ключ не передаётся в клиентский код напрямую
-- Используется HTTPS для всех запросов
-- CORS настроен правильно
+### Frontend
+- React 18 + TypeScript
+- Vite (сборщик)
+- Tailwind CSS (стили)
+- React Router (роутинг)
+- Recharts (графики)
+- Lucide React (иконки)
+
+### Backend
+- Node.js + Express
+- PostgreSQL (база данных)
+- JWT (авторизация)
+- Bcrypt (хеширование паролей)
+- PM2 (менеджер процессов)
+
+### Инфраструктура
+- Nginx (reverse proxy)
+- Let's Encrypt (SSL)
+- Timeweb Cloud (VPS)
+
+## 📊 API Endpoints
+
+### Auth
+- `POST /api/auth/register` - регистрация
+- `POST /api/auth/login` - вход
+
+### User
+- `GET /api/user/me` - информация о пользователе
+- `POST /api/user/update-api-key` - обновление API ключа WB
+
+### Cards
+- `POST /api/cards/save` - сохранение карточки
+- `GET /api/cards/history` - история карточек
+
+### Proxies
+- `POST /api/hf-proxy` - прокси для Hugging Face API
+- `POST /api/wb-proxy` - прокси для Wildberries API
+
+### Stats
+- `GET /api/stats/usage` - статистика использования
+
+## 🔐 Безопасность
+
+- ✅ JWT токены для авторизации
+- ✅ Хеширование паролей (bcrypt)
+- ✅ Защита от CORS атак
+- ✅ Валидация входных данных
+- ✅ API ключи хранятся только на сервере
+- ✅ HTTPS (при наличии SSL сертификата)
+
+## 📈 Мониторинг
+
+```bash
+# Логи backend
+pm2 logs wb-analytics-api
+
+# Статус процессов
+pm2 status
+
+# Логи Nginx
+sudo tail -f /var/log/nginx/wb-analytics.access.log
+sudo tail -f /var/log/nginx/wb-analytics.error.log
+
+# Статистика PostgreSQL
+psql -U wb_user -d wb_analytics -c "SELECT COUNT(*) FROM users;"
+```
+
+## 🚀 Деплой
+
+### Автоматический деплой на Timeweb
+
+```bash
+bash scripts/deploy-timeweb.sh <IP_адрес>
+```
+
+### Ручной деплой
+
+Смотрите [TIMEWEB_DEPLOYMENT.md](./TIMEWEB_DEPLOYMENT.md)
 
 ## 📝 Переменные окружения
 
-### Локальная разработка
-Создайте файл `.env.local`:
-```
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
-```
+Скопируйте `.env.example` в `.env` и заполните:
 
-### Vercel
-Добавьте в Settings → Environment Variables:
-```
-VITE_SUPABASE_URL=your-supabase-url
-VITE_SUPABASE_ANON_KEY=your-supabase-anon-key
+```env
+DATABASE_URL=postgresql://wb_user:password@localhost:5432/wb_analytics
+HF_API_KEY=hf_your_token_here
+JWT_SECRET=your-super-secret-key
+PORT=4000
+NODE_ENV=production
+FRONTEND_URL=http://your-domain.ru
 ```
 
-## 🎯 Возможности
+## 🧪 Тестирование
 
-### Для пользователей
-- ✅ Регистрация и авторизация
-- ✅ Подключение API-ключа WB
-- ✅ Просмотр продаж в реальном времени
-- ✅ Анализ остатков на складах WB и продавца
-- ✅ Умные рекомендации по пополнению
-- ✅ ИИ-аналитик
-- ✅ Детальная аналитика
-- ✅ Уведомления
+```bash
+# Проверка здоровья API
+curl http://localhost:4000/api/health
 
-### Для разработчиков
-- ✅ TypeScript
-- ✅ React 18
-- ✅ Vite
-- ✅ Tailwind CSS
-- ✅ Vercel Serverless Functions
-- ✅ Кэширование
-- ✅ Обработка ошибок
-- ✅ Типизация API ответов
+# Проверка базы данных
+psql -U wb_user -d wb_analytics -c "SELECT * FROM users LIMIT 5;"
+```
 
-## 🐛 Известные ограничения
+## 📚 Документация
 
-1. **Лимиты WB API**
-   - 10 запросов в минуту
-   - Решено кэшированием на 10 минут
+- [LOCAL_DEV_GUIDE.md](./LOCAL_DEV_GUIDE.md) - Локальная разработка
+- [TIMEWEB_DEPLOYMENT.md](./TIMEWEB_DEPLOYMENT.md) - Развертывание на Timeweb
+- [HUGGING_FACE_KEY_GUIDE.md](./HUGGING_FACE_KEY_GUIDE.md) - Настройка Hugging Face API
+- [AI_CARD_GENERATION.md](./AI_CARD_GENERATION.md) - ИИ генерация карточек
 
-2. **Персональный токен**
-   - Обычные токены не работают
-   - Нужен именно персональный токен
+## 💰 Стоимость
 
-3. **CORS**
-   - Прямые запросы из браузера блокируются
-   - Решено через Vercel Function proxy
+### Timeweb Cloud
+- VPS 4 GB RAM: ~1000₽/мес
+- Домен .ru: ~200₽/год
 
-## 📈 Планы развития
+### API
+- Hugging Face: бесплатно (лимит ~1000 запросов/день)
+- Wildberries API: бесплатно для продавцов
 
-- [ ] Telegram бот для уведомлений
-- [ ] Мобильное приложение (PWA)
-- [ ] Экспорт отчётов в PDF/Excel
-- [ ] Мультивалютность
-- [ ] Интеграция с другими маркетплейсами
-- [ ] Командный доступ
-- [ ] API для внешних интеграций
+**Итого:** ~1000₽/мес за полноценный сервис
 
 ## 🤝 Поддержка
 
-Если возникли вопросы:
-- Email: support@wb-analytics.pro
-- Telegram: @wb_analytics_support
+Если возникли проблемы:
+1. Проверьте логи: `pm2 logs wb-analytics-api`
+2. Проверьте базу данных: `npm run db:init`
+3. Проверьте переменные окружения в `.env`
+4. Проверьте логи PostgreSQL: `sudo tail -f /var/log/postgresql/postgresql-*.log`
 
 ## 📄 Лицензия
 
-MIT License
+MIT
 
 ---
 
