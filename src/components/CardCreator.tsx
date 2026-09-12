@@ -157,6 +157,13 @@ export default function CardCreator() {
     setError(null);
 
     try {
+      // Получаем API ключ Hugging Face из переменных окружения
+      const apiKey = import.meta.env.VITE_HF_API_KEY;
+      
+      if (!apiKey) {
+        throw new Error('API ключ Hugging Face не настроен. Добавьте VITE_HF_API_KEY в переменные окружения Vercel.');
+      }
+
       // Формируем промпт - только английский, короткий
       let fullPrompt = selectedStyle.prompt;
       
@@ -176,71 +183,81 @@ export default function CardCreator() {
         fullPrompt += `, ${shortFeatures}`;
       }
 
-      fullPrompt += ', product centered, e-commerce photo';
+      fullPrompt += ', product centered, professional e-commerce photography, 8k, high quality';
 
-      // Ограничиваем длину промпта до 300 символов
-      if (fullPrompt.length > 300) {
-        fullPrompt = fullPrompt.substring(0, 300);
+      // Ограничиваем длину промпта до 500 символов (Hugging Face поддерживает больше)
+      if (fullPrompt.length > 500) {
+        fullPrompt = fullPrompt.substring(0, 500);
       }
 
-      console.log('Промпт:', fullPrompt);
+      console.log('Промпт для Hugging Face:', fullPrompt);
       console.log('Длина промпта:', fullPrompt.length);
 
-      // Генерируем изображение через Pollinations AI с повторными попытками
+      // Генерируем изображение через Hugging Face Inference API
       let imageBlob: Blob | null = null;
       let lastError: Error | null = null;
 
-      for (let attempt = 1; attempt <= 3; attempt++) {
-        try {
-          const seed = Date.now() + attempt;
-          const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=900&height=1200&nologo=true&model=flux&seed=${seed}`;
-          
-          console.log(`Попытка ${attempt}: ${imageUrl}`);
+      // Пробуем несколько моделей (на случай если одна недоступна)
+      const models = [
+        'stabilityai/stable-diffusion-xl-base-1.0',
+        'runwayml/stable-diffusion-v1-5',
+        'prompthero/openjourney'
+      ];
 
-          const response = await fetch(imageUrl, {
-            signal: AbortSignal.timeout(60000), // Таймаут 60 секунд
-          });
-          
+      for (let attempt = 0; attempt < models.length; attempt++) {
+        try {
+          const model = models[attempt];
+          console.log(`Попытка ${attempt + 1}/${models.length}: модель ${model}`);
+
+          const response = await fetch(
+            `https://api-inference.huggingface.co/models/${model}`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${apiKey}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                inputs: fullPrompt,
+                parameters: {
+                  width: 900,
+                  height: 1200,
+                  num_inference_steps: 50,
+                  guidance_scale: 7.5,
+                }
+              }),
+              signal: AbortSignal.timeout(120000), // 2 минуты таймаут
+            }
+          );
+
+          console.log(`Статус ответа от ${model}: ${response.status}`);
+
           if (response.ok) {
             imageBlob = await response.blob();
-            console.log(`Успешная генерация на попытке ${attempt}`);
+            console.log(`✅ Успешная генерация с моделью ${model}`);
             break;
           } else {
-            lastError = new Error(`HTTP ${response.status}`);
-            console.warn(`Попытка ${attempt} не удалась: HTTP ${response.status}`);
+            const errorText = await response.text();
+            console.warn(`Модель ${model} не сработала:`, errorText);
+            lastError = new Error(`Модель ${model}: ${response.status} - ${errorText}`);
+            
             // Ждём перед следующей попыткой
-            if (attempt < 3) {
-              await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+            if (attempt < models.length - 1) {
+              await new Promise(resolve => setTimeout(resolve, 2000));
             }
           }
         } catch (err: any) {
+          console.warn(`Ошибка с моделью:`, err.message);
           lastError = err;
-          console.warn(`Попытка ${attempt} не удалась:`, err.message);
-          if (attempt < 3) {
-            await new Promise(resolve => setTimeout(resolve, 2000 * attempt));
+          
+          if (attempt < models.length - 1) {
+            await new Promise(resolve => setTimeout(resolve, 2000));
           }
         }
       }
 
-      // Если основной endpoint не сработал, пробуем альтернативный
       if (!imageBlob) {
-        console.log('Пробуем альтернативный endpoint...');
-        try {
-          const altUrl = `https://pollinations.ai/p/${encodeURIComponent(fullPrompt)}?width=900&height=1200&nologo=true`;
-          const altResponse = await fetch(altUrl, {
-            signal: AbortSignal.timeout(60000),
-          });
-          if (altResponse.ok) {
-            imageBlob = await altResponse.blob();
-            console.log('Альтернативный endpoint сработал');
-          }
-        } catch (altErr) {
-          console.warn('Альтернативный endpoint тоже не сработал:', altErr);
-        }
-      }
-
-      if (!imageBlob) {
-        throw new Error(`Не удалось сгенерировать изображение. Попробуйте ещё раз или выберите другой стиль.`);
+        throw new Error(`Не удалось сгенерировать изображение. ${lastError?.message || 'Попробуйте ещё раз или выберите другой стиль.'}`);
       }
 
       const generatedUrl = URL.createObjectURL(imageBlob);
@@ -591,44 +608,49 @@ export default function CardCreator() {
       )}
 
       {/* Info */}
-      <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+      <div className="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-6">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Sparkles size={24} className="text-green-600" />
+          <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Sparkles size={24} className="text-blue-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-green-900 mb-2">
-              🎨 ИИ генерация продающих карточек
+            <h3 className="font-bold text-blue-900 mb-2">
+              🎨 ИИ генерация через Hugging Face API
             </h3>
-            <p className="text-sm text-green-800 mb-3">
-              Используется <strong>Pollinations AI</strong> с моделью Flux для генерации профессиональных карточек.
+            <p className="text-sm text-blue-800 mb-3">
+              Используется <strong>Hugging Face Inference API</strong> с моделью <strong>Stable Diffusion XL</strong> для генерации профессиональных карточек.
               ИИ создаёт продающие изображения в выбранном стиле с учётом информации о товаре.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-green-700">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-blue-700">
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" />
+                <CheckCircle2 size={14} className="text-blue-600" />
                 <span>12 профессиональных стилей</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" />
-                <span>Полностью бесплатно</span>
+                <CheckCircle2 size={14} className="text-blue-600" />
+                <span>Бесплатно (HF API)</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" />
-                <span>Безлимитное использование</span>
+                <CheckCircle2 size={14} className="text-blue-600" />
+                <span>Stable Diffusion XL</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" />
-                <span>Без API ключей</span>
+                <CheckCircle2 size={14} className="text-blue-600" />
+                <span>30-120 сек генерация</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" />
+                <CheckCircle2 size={14} className="text-blue-600" />
                 <span>Размер 900x1200 (WB)</span>
               </div>
               <div className="flex items-center gap-2">
-                <CheckCircle2 size={14} className="text-green-600" />
+                <CheckCircle2 size={14} className="text-blue-600" />
                 <span>Инфографика и цена</span>
               </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-blue-200">
+              <p className="text-xs text-blue-700">
+                💡 <strong>Время генерации:</strong> 30-120 секунд. Система автоматически пробует несколько моделей для лучшей надёжности.
+              </p>
             </div>
           </div>
         </div>
