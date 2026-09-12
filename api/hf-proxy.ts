@@ -95,6 +95,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       console.log(`[hf-proxy] Генерация через ${model}...`);
       console.log(`[hf-proxy] Промпт (первые 100 символов): ${prompt.substring(0, 100)}...`);
+      console.log(`[hf-proxy] Параметры:`, JSON.stringify(parameters || {}));
 
       const response = await fetch(
         `https://api-inference.huggingface.co/models/${model}`,
@@ -107,9 +108,9 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
           body: JSON.stringify({
             inputs: prompt,
             parameters: parameters || {
-              width: 900,
-              height: 1200,
-              num_inference_steps: 30,
+              // Убираем width/height - модели не поддерживают произвольные размеры
+              // Генерируем в стандартном размере, масштабируем на клиенте
+              num_inference_steps: 25,
               guidance_scale: 7.5,
             }
           }),
@@ -117,11 +118,20 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       );
 
       console.log(`[hf-proxy] Статус ответа от ${model}: ${response.status}`);
+      console.log(`[hf-proxy] Content-Type: ${response.headers.get('content-type')}`);
 
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[hf-proxy] Ошибка генерации (${model}):`, response.status);
         console.error(`[hf-proxy] Детали ошибки:`, errorText);
+        
+        // Пытаемся распарсить JSON ошибку
+        try {
+          const errorJson = JSON.parse(errorText);
+          console.error(`[hf-proxy] Ошибка JSON:`, errorJson);
+        } catch (e) {
+          // Не JSON, используем текст
+        }
         
         // Если модель загружается (503), возвращаем специальную ошибку
         if (response.status === 503) {

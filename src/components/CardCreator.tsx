@@ -277,11 +277,12 @@ export default function CardCreator() {
       let lastError: Error | null = null;
 
       // Пробуем несколько моделей (на случай если одна недоступна)
-      // Используем только стабильные модели которые точно работают на бесплатном тарифе
+      // Используем модели которые точно работают без дополнительных условий
       const models = [
-        'stabilityai/stable-diffusion-2-1',
-        'CompVis/stable-diffusion-v1-4',
-        'stabilityai/stable-diffusion-xl-base-1.0'
+        'stabilityai/stable-diffusion-2-1-base',  // Базовая версия без условий
+        'CompVis/stable-diffusion-v1-4',          // Старая но стабильная
+        'runwayml/stable-diffusion-v1-5',         // Альтернативная
+        'stabilityai/stable-diffusion-2-1',       // Полная версия
       ];
 
       for (let attempt = 0; attempt < models.length; attempt++) {
@@ -298,12 +299,8 @@ export default function CardCreator() {
               action: 'generate',
               prompt: fullPrompt,
               model: model,
-              parameters: {
-                width: 900,
-                height: 1200,
-                num_inference_steps: 50,
-                guidance_scale: 7.5,
-              }
+              // Не передаём width/height - модели не поддерживают произвольные размеры
+              // Генерируем в стандартном размере, масштабируем на клиенте
             }),
           });
 
@@ -363,6 +360,7 @@ export default function CardCreator() {
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Не удалось создать canvas');
 
+      // Финальный размер для Wildberries
       canvas.width = 900;
       canvas.height = 1200;
 
@@ -374,8 +372,33 @@ export default function CardCreator() {
         img.src = generatedUrl;
       });
 
-      // Рисуем изображение
-      ctx.drawImage(img, 0, 0, 900, 1200);
+      // Масштабируем изображение до 900x1200 (требование WB)
+      // Используем contain для сохранения пропорций
+      const imgAspectRatio = img.width / img.height;
+      const canvasAspectRatio = 900 / 1200;
+      
+      let drawWidth, drawHeight, drawX, drawY;
+      
+      if (imgAspectRatio > canvasAspectRatio) {
+        // Изображение шире - масштабируем по ширине
+        drawWidth = 900;
+        drawHeight = 900 / imgAspectRatio;
+        drawX = 0;
+        drawY = (1200 - drawHeight) / 2;
+      } else {
+        // Изображение выше - масштабируем по высоте
+        drawHeight = 1200;
+        drawWidth = 1200 * imgAspectRatio;
+        drawX = (900 - drawWidth) / 2;
+        drawY = 0;
+      }
+
+      // Заполняем фон белым цветом
+      ctx.fillStyle = '#FFFFFF';
+      ctx.fillRect(0, 0, 900, 1200);
+
+      // Рисуем изображение с масштабированием
+      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
 
       // Добавляем инфографику если есть данные
       if (infographicData.title || infographicData.price) {
