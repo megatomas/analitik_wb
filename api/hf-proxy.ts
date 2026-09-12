@@ -16,11 +16,17 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
   try {
     const { action, prompt, model, parameters } = req.body;
-    const apiKey = process.env.VITE_HF_API_KEY;
+    // На сервере Vercel используем переменную БЕЗ префикса VITE_
+    const apiKey = process.env.HF_API_KEY || process.env.VITE_HF_API_KEY;
 
     if (!apiKey) {
-      return res.status(500).json({ error: 'API ключ не настроен на сервере' });
+      console.error('[hf-proxy] API ключ не найден! Проверьте переменные окружения Vercel.');
+      return res.status(500).json({ 
+        error: 'API ключ не настроен на сервере. Добавьте переменную HF_API_KEY в Vercel Environment Variables.' 
+      });
     }
+    
+    console.log('[hf-proxy] API ключ найден, длина:', apiKey.length);
 
     if (action === 'analyze') {
       // Анализ изображения через CLIP
@@ -88,6 +94,7 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
       }
 
       console.log(`[hf-proxy] Генерация через ${model}...`);
+      console.log(`[hf-proxy] Промпт (первые 100 символов): ${prompt.substring(0, 100)}...`);
 
       const response = await fetch(
         `https://api-inference.huggingface.co/models/${model}`,
@@ -102,16 +109,28 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             parameters: parameters || {
               width: 900,
               height: 1200,
-              num_inference_steps: 50,
+              num_inference_steps: 30,
               guidance_scale: 7.5,
             }
           }),
         }
       );
 
+      console.log(`[hf-proxy] Статус ответа от ${model}: ${response.status}`);
+
       if (!response.ok) {
         const errorText = await response.text();
         console.error(`[hf-proxy] Ошибка генерации (${model}):`, response.status, errorText);
+        
+        // Если модель загружается (503), возвращаем специальную ошибку
+        if (response.status === 503) {
+          return res.status(503).json({ 
+            error: 'Модель загружается, попробуйте через 20 секунд', 
+            details: errorText,
+            retryAfter: 20
+          });
+        }
+        
         return res.status(response.status).json({ 
           error: 'Ошибка генерации изображения', 
           details: errorText 
