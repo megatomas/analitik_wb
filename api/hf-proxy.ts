@@ -120,7 +120,8 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
 
       if (!response.ok) {
         const errorText = await response.text();
-        console.error(`[hf-proxy] Ошибка генерации (${model}):`, response.status, errorText);
+        console.error(`[hf-proxy] Ошибка генерации (${model}):`, response.status);
+        console.error(`[hf-proxy] Детали ошибки:`, errorText);
         
         // Если модель загружается (503), возвращаем специальную ошибку
         if (response.status === 503) {
@@ -128,6 +129,15 @@ export default async function handler(req: VercelRequest, res: VercelResponse) {
             error: 'Модель загружается, попробуйте через 20 секунд', 
             details: errorText,
             retryAfter: 20
+          });
+        }
+        
+        // Если внутренняя ошибка сервера (500), пробуем другую модель
+        if (response.status === 500) {
+          return res.status(500).json({ 
+            error: 'Внутренняя ошибка модели, попробуйте другую модель', 
+            details: errorText,
+            tryNextModel: true
           });
         }
         
