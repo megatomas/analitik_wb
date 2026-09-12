@@ -277,13 +277,11 @@ export default function CardCreator() {
       let lastError: Error | null = null;
 
       // Пробуем несколько моделей (на случай если одна недоступна)
-      // FLUX.1-schnell - самая быстрая и бесплатная
-      // stable-diffusion-xl - хорошее качество
-      // stable-diffusion-v1-5 - старая но надёжная
+      // Используем только стабильные модели которые точно работают на бесплатном тарифе
       const models = [
-        'black-forest-labs/FLUX.1-schnell',
-        'stabilityai/stable-diffusion-xl-base-1.0',
-        'runwayml/stable-diffusion-v1-5'
+        'stabilityai/stable-diffusion-2-1',
+        'CompVis/stable-diffusion-v1-4',
+        'stabilityai/stable-diffusion-xl-base-1.0'
       ];
 
       for (let attempt = 0; attempt < models.length; attempt++) {
@@ -319,6 +317,15 @@ export default function CardCreator() {
           } else {
             const errorData = await response.json();
             console.warn(`Модель ${model} не сработала:`, errorData.error);
+            console.warn(`Детали:`, errorData.details);
+            
+            // Если это внутренняя ошибка модели, автоматически пробуем следующую
+            if (errorData.tryNextModel && attempt < models.length - 1) {
+              console.log(`Автоматически пробуем следующую модель...`);
+              lastError = new Error(`Модель ${model}: ${errorData.error}`);
+              continue; // Переходим к следующей модели без задержки
+            }
+            
             lastError = new Error(`Модель ${model}: ${errorData.error}`);
             
             // Ждём перед следующей попыткой
@@ -710,7 +717,7 @@ export default function CardCreator() {
             <AlertCircle size={20} className="text-red-600 mt-0.5" />
             <div className="flex-1">
               <p className="text-sm font-medium text-red-800 mb-2">{error}</p>
-              <div className="flex gap-2">
+              <div className="flex gap-2 flex-wrap">
                 <button
                   onClick={generateCard}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm font-medium"
@@ -728,9 +735,15 @@ export default function CardCreator() {
                   Выбрать другой стиль
                 </button>
               </div>
-              <p className="text-xs text-red-600 mt-2">
-                💡 Совет: Если ошибка повторяется, попробуйте выбрать другой стиль или упростить описание товара.
-              </p>
+              <div className="mt-3 text-xs text-red-600 space-y-1">
+                <p>💡 <strong>Возможные решения:</strong></p>
+                <ul className="list-disc list-inside ml-2 space-y-1">
+                  <li>Подождите 1-2 минуты и попробуйте снова (модели могут быть перегружены)</li>
+                  <li>Выберите другой стиль карточки</li>
+                  <li>Упростите описание товара (короткое название)</li>
+                  <li>Проверьте логи в Vercel Functions для деталей ошибки</li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
