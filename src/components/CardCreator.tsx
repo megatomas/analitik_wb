@@ -177,63 +177,29 @@ export default function CardCreator() {
 
   // Анализ загруженного фото для автоматического определения категории
   const analyzeImage = async (imageDataUrl: string): Promise<{ category: string; confidence: number; suggestedStyle: string; prompt: string }> => {
-    const apiKey = import.meta.env.VITE_HF_API_KEY;
-    
-    if (!apiKey) {
-      throw new Error('API ключ Hugging Face не настроен');
-    }
-
-    // Конвертируем data URL в blob
-    const response = await fetch(imageDataUrl);
-    const blob = await response.blob();
-
-    // Категории товаров с описаниями для zero-shot classification
-    const categories = [
-      'cosmetics and beauty products',
-      'electronics and gadgets',
-      'fashion clothing and accessories',
-      'food and beverages',
-      'sports equipment',
-      'home and garden items',
-      'automotive parts and accessories',
-      'children toys and products',
-      'luxury premium items',
-      'eco-friendly organic products',
-      'technology and innovation',
-      'minimalist simple design'
-    ];
-
     console.log('Анализ изображения для определения категории...');
 
-    // Используем модель CLIP для zero-shot classification
-    const analysisResponse = await fetch(
-      'https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32',
-      {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${apiKey}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          inputs: {
-            image: await blobToBase64(blob)
-          },
-          parameters: {
-            candidate_labels: categories
-          }
-        }),
-        signal: AbortSignal.timeout(30000),
-      }
-    );
+    // Используем серверный прокси вместо прямого запроса к Hugging Face
+    const response = await fetch('/api/hf-proxy', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        action: 'analyze',
+        imageData: imageDataUrl
+      }),
+    });
 
-    if (!analysisResponse.ok) {
-      throw new Error(`Ошибка анализа изображения: ${analysisResponse.status}`);
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(`Ошибка анализа изображения: ${errorData.error || response.status}`);
     }
 
-    const analysisResult = await analysisResponse.json();
+    const analysisResult = await response.json();
     
     // Получаем наиболее вероятную категорию
-    const topCategory = analysisResult.labels?.[0] || categories[0];
+    const topCategory = analysisResult.labels?.[0] || 'minimalist simple design';
     const confidence = analysisResult.scores?.[0] || 0;
 
     console.log(`Определена категория: ${topCategory} (уверенность: ${(confidence * 100).toFixed(1)}%)`);
@@ -268,15 +234,7 @@ export default function CardCreator() {
     };
   };
 
-  // Конвертация blob в base64
-  const blobToBase64 = (blob: Blob): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result as string);
-      reader.onerror = reject;
-      reader.readAsDataURL(blob);
-    });
-  };
+
 
   const generateCard = async () => {
     if (!selectedImage || !selectedStyle) return;
@@ -285,13 +243,6 @@ export default function CardCreator() {
     setError(null);
 
     try {
-      // Получаем API ключ Hugging Face из переменных окружения
-      const apiKey = import.meta.env.VITE_HF_API_KEY;
-      
-      if (!apiKey) {
-        throw new Error('API ключ Hugging Face не настроен. Добавьте VITE_HF_API_KEY в переменные окружения Vercel.');
-      }
-
       // Формируем промпт - только английский, короткий
       let fullPrompt = selectedStyle.prompt;
       
@@ -321,8 +272,8 @@ export default function CardCreator() {
       console.log('Промпт для Hugging Face:', fullPrompt);
       console.log('Длина промпта:', fullPrompt.length);
 
-      // Генерируем изображение через Hugging Face Inference API
-      let imageBlob: Blob | null = null;
+      // Генерируем изображение через серверный прокси
+      let imageDataUrl: string | null = null;
       let lastError: Error | null = null;
 
       // Пробуем несколько моделей (на случай если одна недоступна)
@@ -337,37 +288,35 @@ export default function CardCreator() {
           const model = models[attempt];
           console.log(`Попытка ${attempt + 1}/${models.length}: модель ${model}`);
 
-          const response = await fetch(
-            `https://api-inference.huggingface.co/models/${model}`,
-            {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${apiKey}`,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                inputs: fullPrompt,
-                parameters: {
-                  width: 900,
-                  height: 1200,
-                  num_inference_steps: 50,
-                  guidance_scale: 7.5,
-                }
-              }),
-              signal: AbortSignal.timeout(120000), // 2 минуты таймаут
-            }
-          );
+          const response = await fetch('/api/hf-proxy', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              action: 'generate',
+              prompt: fullPrompt,
+              model: model,
+              parameters: {
+                width: 900,
+                height: 1200,
+                num_inference_steps: 50,
+                guidance_scale: 7.5,
+              }
+            }),
+          });
 
           console.log(`Статус ответа от ${model}: ${response.status}`);
 
           if (response.ok) {
-            imageBlob = await response.blob();
+            const result = await response.json();
+            imageDataUrl = result.image;
             console.log(`✅ Успешная генерация с моделью ${model}`);
             break;
           } else {
-            const errorText = await response.text();
-            console.warn(`Модель ${model} не сработала:`, errorText);
-            lastError = new Error(`Модель ${model}: ${response.status} - ${errorText}`);
+            const errorData = await response.json();
+            console.warn(`Модель ${model} не сработала:`, errorData.error);
+            lastError = new Error(`Модель ${model}: ${errorData.error}`);
             
             // Ждём перед следующей попыткой
             if (attempt < models.length - 1) {
@@ -384,10 +333,19 @@ export default function CardCreator() {
         }
       }
 
-      if (!imageBlob) {
+      if (!imageDataUrl) {
         throw new Error(`Не удалось сгенерировать изображение. ${lastError?.message || 'Попробуйте ещё раз или выберите другой стиль.'}`);
       }
 
+      // Конвертируем base64 в blob для canvas
+      const base64Data = imageDataUrl.split(',')[1];
+      const byteString = atob(base64Data);
+      const ab = new ArrayBuffer(byteString.length);
+      const ia = new Uint8Array(ab);
+      for (let i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+      }
+      const imageBlob = new Blob([ab], { type: 'image/jpeg' });
       const generatedUrl = URL.createObjectURL(imageBlob);
 
       // Создаем canvas для добавления инфографики
@@ -787,7 +745,7 @@ export default function CardCreator() {
             </h3>
             <p className="text-sm text-blue-800 mb-3">
               Используется <strong>Hugging Face Inference API</strong> с моделью <strong>Stable Diffusion XL</strong> для генерации профессиональных карточек.
-              ИИ создаёт продающие изображения в выбранном стиле с учётом информации о товаре.
+              Запросы идут через защищённый серверный прокси Vercel для обхода ограничений сети.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-blue-700">
               <div className="flex items-center gap-2">
