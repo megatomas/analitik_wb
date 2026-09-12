@@ -277,10 +277,13 @@ export default function CardCreator() {
       let lastError: Error | null = null;
 
       // Пробуем несколько моделей (на случай если одна недоступна)
+      // FLUX.1-schnell - самая быстрая и бесплатная
+      // stable-diffusion-xl - хорошее качество
+      // stable-diffusion-v1-5 - старая но надёжная
       const models = [
+        'black-forest-labs/FLUX.1-schnell',
         'stabilityai/stable-diffusion-xl-base-1.0',
-        'runwayml/stable-diffusion-v1-5',
-        'prompthero/openjourney'
+        'runwayml/stable-diffusion-v1-5'
       ];
 
       for (let attempt = 0; attempt < models.length; attempt++) {
