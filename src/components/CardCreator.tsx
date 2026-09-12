@@ -1,41 +1,114 @@
 import { useState, useRef } from 'react';
 import { Upload, Download, Loader2, Sparkles, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
-import { removeBackground } from '@imgly/background-removal';
 
-interface Concept {
+interface Style {
   id: string;
   name: string;
   description: string;
   icon: string;
-  type: 'solid' | 'gradient' | 'pattern';
-  color1?: string;
-  color2?: string;
+  prompt: string;
 }
 
 export default function CardCreator() {
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [selectedConcept, setSelectedConcept] = useState<Concept | null>(null);
+  const [selectedStyle, setSelectedStyle] = useState<Style | null>(null);
   const [infographicData, setInfographicData] = useState({
     title: '',
     price: '',
     features: '',
-    material: '',
   });
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const concepts: Concept[] = [
-    { id: 'studio-white', name: 'Белый фон', description: 'Классический каталожный стиль', icon: '⬜', type: 'solid', color1: '#FFFFFF' },
-    { id: 'studio-gradient', name: 'Градиент', description: 'Мягкий градиент от серого к белому', icon: '🎨', type: 'gradient', color1: '#E5E7EB', color2: '#FFFFFF' },
-    { id: 'studio-dark', name: 'Темный фон', description: 'Премиальный темный стиль', icon: '⬛', type: 'solid', color1: '#1F2937' },
-    { id: 'pastel-pink', name: 'Пастельный розовый', description: 'Нежный розовый фон', icon: '🌸', type: 'solid', color1: '#FCE7F3' },
-    { id: 'pastel-blue', name: 'Пастельный голубой', description: 'Свежий голубой фон', icon: '💙', type: 'solid', color1: '#DBEAFE' },
-    { id: 'pastel-green', name: 'Пастельный зеленый', description: 'Натуральный зеленый фон', icon: '💚', type: 'solid', color1: '#D1FAE5' },
-    { id: 'warm-beige', name: 'Теплый бежевый', description: 'Уютный бежевый фон', icon: '🤎', type: 'solid', color1: '#FEF3C7' },
-    { id: 'cool-gray', name: 'Холодный серый', description: 'Современный серый фон', icon: '🩶', type: 'solid', color1: '#F3F4F6' },
+  // Стили карточек с профессиональными промптами
+  const styles: Style[] = [
+    {
+      id: 'cosmetics',
+      name: 'Косметика',
+      description: 'Элегантный стиль для косметики и ухода',
+      icon: '💄',
+      prompt: 'luxury cosmetics product photography, elegant marble surface, soft pink lighting, premium beauty brand, professional studio shot, 8k resolution, high-end aesthetic, minimalist composition'
+    },
+    {
+      id: 'electronics',
+      name: 'Электроника',
+      description: 'Современный стиль для гаджетов',
+      icon: '📱',
+      prompt: 'modern electronics product photography, sleek dark background, dramatic blue accent lighting, tech gadget showcase, professional studio shot, 8k resolution, futuristic aesthetic, clean composition'
+    },
+    {
+      id: 'fashion',
+      name: 'Одежда',
+      description: 'Стильный образ для моды',
+      icon: '👗',
+      prompt: 'fashion product photography, stylish clothing display, neutral beige background, soft natural lighting, editorial style shot, 8k resolution, trendy aesthetic, professional composition'
+    },
+    {
+      id: 'food',
+      name: 'Продукты питания',
+      description: 'Аппетитный стиль для еды',
+      icon: '🍕',
+      prompt: 'appetizing food product photography, rustic wooden surface, warm golden lighting, fresh ingredients visible, professional food styling, 8k resolution, inviting aesthetic, close-up composition'
+    },
+    {
+      id: 'sports',
+      name: 'Спорт',
+      description: 'Динамичный стиль для спорта',
+      icon: '⚽',
+      prompt: 'dynamic sports product photography, energetic composition, vibrant background, action-oriented lighting, athletic brand aesthetic, 8k resolution, powerful visual, professional shot'
+    },
+    {
+      id: 'home',
+      name: 'Дом и сад',
+      description: 'Уютный стиль для дома',
+      icon: '🏠',
+      prompt: 'cozy home product photography, warm interior setting, natural daylight, lifestyle composition, comfortable aesthetic, 8k resolution, inviting atmosphere, professional shot'
+    },
+    {
+      id: 'auto',
+      name: 'Автотовары',
+      description: 'Премиум стиль для авто',
+      icon: '🚗',
+      prompt: 'premium automotive product photography, sleek metallic surface, dramatic lighting, luxury car accessories showcase, professional studio shot, 8k resolution, high-end aesthetic, sophisticated composition'
+    },
+    {
+      id: 'kids',
+      name: 'Детские товары',
+      description: 'Яркий стиль для детей',
+      icon: '🧸',
+      prompt: 'cheerful kids product photography, bright playful colors, fun composition, child-friendly aesthetic, professional studio shot, 8k resolution, joyful atmosphere, engaging visual'
+    },
+    {
+      id: 'premium',
+      name: 'Премиум',
+      description: 'Люксовый стиль для дорогих товаров',
+      icon: '💎',
+      prompt: 'luxury premium product photography, elegant black and gold theme, dramatic spotlight lighting, exclusive brand aesthetic, professional studio shot, 8k resolution, sophisticated composition, high-end visual'
+    },
+    {
+      id: 'eco',
+      name: 'Эко товары',
+      description: 'Натуральный стиль для эко',
+      icon: '🌿',
+      prompt: 'eco-friendly product photography, natural green setting, organic materials visible, sustainable brand aesthetic, soft natural lighting, 8k resolution, earthy tones, professional composition'
+    },
+    {
+      id: 'tech',
+      name: 'Технологии',
+      description: 'Футуристичный стиль для tech',
+      icon: '🔬',
+      prompt: 'cutting-edge technology product photography, futuristic holographic elements, neon accent lighting, innovative design showcase, professional studio shot, 8k resolution, modern aesthetic, clean composition'
+    },
+    {
+      id: 'minimal',
+      name: 'Минимализм',
+      description: 'Чистый минималистичный стиль',
+      icon: '⚪',
+      prompt: 'minimalist product photography, pure white background, clean simple composition, soft diffused lighting, Scandinavian aesthetic, 8k resolution, professional shot, elegant simplicity'
+    },
   ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -60,108 +133,89 @@ export default function CardCreator() {
     reader.readAsDataURL(file);
   };
 
-  const processImage = async () => {
-    if (!selectedImage || !selectedConcept) return;
+  const generateCard = async () => {
+    if (!selectedImage || !selectedStyle) return;
 
     setIsProcessing(true);
     setError(null);
 
     try {
-      // Шаг 1: Удаляем фон с помощью ИИ
-      console.log('Удаление фона с помощью ИИ...');
-      const imageBlob = await fetch(selectedImage).then(r => r.blob());
-      const removedBgBlob = await removeBackground(imageBlob, {
-        progress: (key, current, total) => {
-          console.log(`Прогресс: ${key} - ${((current / total) * 100).toFixed(0)}%`);
-        },
-        output: {
-          format: 'image/png',
-          quality: 0.9,
-        },
-      });
+      // Формируем промпт на основе стиля и информации о товаре
+      let fullPrompt = selectedStyle.prompt;
+      
+      if (infographicData.title) {
+        fullPrompt += `, featuring ${infographicData.title}`;
+      }
+      
+      if (infographicData.features) {
+        fullPrompt += `, showcasing ${infographicData.features}`;
+      }
 
-      // Шаг 2: Создаем canvas для финальной обработки
+      fullPrompt += ', product centered, professional e-commerce photography, ready for marketplace listing';
+
+      // Генерируем изображение через Pollinations AI
+      const imageUrl = `https://image.pollinations.ai/prompt/${encodeURIComponent(fullPrompt)}?width=900&height=1200&nologo=true&model=flux&seed=${Date.now()}`;
+      
+      console.log('Генерация карточки:', imageUrl);
+
+      // Загружаем сгенерированное изображение
+      const response = await fetch(imageUrl);
+      
+      if (!response.ok) {
+        throw new Error('Не удалось сгенерировать изображение');
+      }
+
+      const imageBlob = await response.blob();
+      const generatedUrl = URL.createObjectURL(imageBlob);
+
+      // Создаем canvas для добавления инфографики
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Не удалось создать canvas');
 
-      // Размер для WB (3:4)
       canvas.width = 900;
       canvas.height = 1200;
 
-      // Шаг 3: Рисуем фон
-      if (selectedConcept.type === 'solid') {
-        ctx.fillStyle = selectedConcept.color1 || '#FFFFFF';
-        ctx.fillRect(0, 0, 900, 1200);
-      } else if (selectedConcept.type === 'gradient') {
-        const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
-        gradient.addColorStop(0, selectedConcept.color1 || '#E5E7EB');
-        gradient.addColorStop(1, selectedConcept.color2 || '#FFFFFF');
-        ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 900, 1200);
-      }
-
-      // Шаг 4: Загружаем изображение без фона
-      const productImg = new Image();
-      const productUrl = URL.createObjectURL(removedBgBlob);
-      
+      // Загружаем сгенерированное изображение
+      const img = new Image();
       await new Promise((resolve, reject) => {
-        productImg.onload = resolve;
-        productImg.onerror = reject;
-        productImg.src = productUrl;
+        img.onload = resolve;
+        img.onerror = reject;
+        img.src = generatedUrl;
       });
 
-      // Шаг 5: Масштабируем и размещаем товар
-      const imgAspectRatio = productImg.width / productImg.height;
-      const canvasAspectRatio = 900 / 1200;
-      
-      let drawWidth, drawHeight, drawX, drawY;
-      
-      if (imgAspectRatio > canvasAspectRatio) {
-        drawHeight = 1200 * 0.75;
-        drawWidth = drawHeight * imgAspectRatio;
-        drawX = (900 - drawWidth) / 2;
-        drawY = (1200 - drawHeight) / 2;
-      } else {
-        drawWidth = 900 * 0.75;
-        drawHeight = drawWidth / imgAspectRatio;
-        drawX = (900 - drawWidth) / 2;
-        drawY = (1200 - drawHeight) / 2;
-      }
+      // Рисуем изображение
+      ctx.drawImage(img, 0, 0, 900, 1200);
 
-      ctx.drawImage(productImg, drawX, drawY, drawWidth, drawHeight);
-
-      // Шаг 6: Добавляем инфографику если есть данные
+      // Добавляем инфографику если есть данные
       if (infographicData.title || infographicData.price) {
         // Полупрозрачная плашка внизу
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.fillRect(0, 1050, 900, 150);
         
         ctx.fillStyle = '#FFFFFF';
-        ctx.font = 'bold 32px Arial';
+        ctx.font = 'bold 36px Arial';
         ctx.textAlign = 'center';
         
         if (infographicData.title) {
-          ctx.fillText(infographicData.title, 450, 1090);
+          ctx.fillText(infographicData.title, 450, 1095);
         }
         
         if (infographicData.price) {
-          ctx.font = 'bold 40px Arial';
+          ctx.font = 'bold 44px Arial';
           ctx.fillStyle = '#FFD700';
-          ctx.fillText(infographicData.price + ' ₽', 450, 1140);
+          ctx.fillText(infographicData.price + ' ₽', 450, 1150);
         }
       }
 
-      // Шаг 7: Конвертируем в JPEG
       const processedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
       setProcessedImage(processedDataUrl);
       setStep(4);
 
-      // Очищаем URL
-      URL.revokeObjectURL(productUrl);
+      URL.revokeObjectURL(generatedUrl);
     } catch (err: any) {
-      console.error('Ошибка обработки:', err);
-      setError('Ошибка при обработке изображения: ' + err.message);
+      console.error('Ошибка генерации:', err);
+      setError('Ошибка при генерации карточки: ' + err.message);
     } finally {
       setIsProcessing(false);
     }
@@ -170,7 +224,7 @@ export default function CardCreator() {
   const downloadImage = () => {
     if (!processedImage) return;
     const link = document.createElement('a');
-    link.download = `wb-card-${Date.now()}.jpg`;
+    link.download = `wb-card-${selectedStyle?.id}-${Date.now()}.jpg`;
     link.href = processedImage;
     link.click();
   };
@@ -178,8 +232,8 @@ export default function CardCreator() {
   const resetAll = () => {
     setStep(1);
     setSelectedImage(null);
-    setSelectedConcept(null);
-    setInfographicData({ title: '', price: '', features: '', material: '' });
+    setSelectedStyle(null);
+    setInfographicData({ title: '', price: '', features: '' });
     setProcessedImage(null);
     setError(null);
     if (fileInputRef.current) {
@@ -191,23 +245,23 @@ export default function CardCreator() {
     <div className="max-w-6xl mx-auto p-6">
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">Создание карточки товара</h1>
-        <p className="text-gray-600">Создайте профессиональную карточку товара с помощью ИИ за 3 шага</p>
+        <h1 className="text-3xl font-bold text-gray-900 mb-2">Создание продающей карточки</h1>
+        <p className="text-gray-600">ИИ создаст профессиональную карточку товара в выбранном стиле</p>
       </div>
 
       {/* Встроенный ИИ инструмент */}
-      <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-5">
+      <div className="mb-6 bg-gradient-to-r from-purple-50 to-indigo-50 border-2 border-purple-300 rounded-xl p-5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <Sparkles size={20} className="text-blue-600" />
+          <div className="w-10 h-10 bg-purple-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles size={20} className="text-purple-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-blue-900 mb-1">
-              Встроенный ИИ инструмент - полностью бесплатно!
+            <h3 className="font-bold text-purple-900 mb-1">
+              ИИ генерация продающих карточек
             </h3>
-            <p className="text-sm text-blue-800">
-              Удаление фона с помощью искусственного интеллекта прямо в браузере. 
-              Без API ключей, без оплат, без ограничений!
+            <p className="text-sm text-purple-800">
+              Выберите стиль товара, и ИИ создаст профессиональную продающую карточку. 
+              Полностью бесплатно, безлимитно, без API ключей!
             </p>
           </div>
         </div>
@@ -231,8 +285,8 @@ export default function CardCreator() {
         </div>
         <div className="flex justify-between mt-2 text-sm text-gray-600">
           <span>Загрузка</span>
-          <span>Концепция</span>
-          <span>Инфографика</span>
+          <span>Стиль</span>
+          <span>Инфо</span>
           <span>Результат</span>
         </div>
       </div>
@@ -241,7 +295,7 @@ export default function CardCreator() {
       {step === 1 && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
           <h2 className="text-2xl font-bold mb-4">Шаг 1: Загрузите фото товара</h2>
-          <p className="text-gray-600 mb-6">Подойдет обычное фото с телефона</p>
+          <p className="text-gray-600 mb-6">ИИ использует ваше фото как основу для создания продающей карточки</p>
 
           {!selectedImage ? (
             <div
@@ -283,33 +337,26 @@ export default function CardCreator() {
         </div>
       )}
 
-      {/* Step 2: Concept */}
+      {/* Step 2: Style */}
       {step === 2 && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold mb-4">Шаг 2: Выберите фон</h2>
-          <p className="text-gray-600 mb-6">ИИ удалит фон с товара и разместит его на выбранном фоне</p>
+          <h2 className="text-2xl font-bold mb-4">Шаг 2: Выберите стиль карточки</h2>
+          <p className="text-gray-600 mb-6">ИИ создаст продающую карточку в профессиональном стиле для вашей категории товара</p>
 
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
-            {concepts.map((concept) => (
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+            {styles.map((style) => (
               <button
-                key={concept.id}
-                onClick={() => setSelectedConcept(concept)}
+                key={style.id}
+                onClick={() => setSelectedStyle(style)}
                 className={`p-4 rounded-xl border-2 transition-all ${
-                  selectedConcept?.id === concept.id
+                  selectedStyle?.id === style.id
                     ? 'border-purple-600 bg-purple-50'
                     : 'border-gray-200 hover:border-purple-300'
                 }`}
               >
-                <div 
-                  className="w-full h-20 rounded-lg mb-2 border border-gray-200"
-                  style={{
-                    background: concept.type === 'gradient'
-                      ? `linear-gradient(to bottom, ${concept.color1}, ${concept.color2})`
-                      : concept.color1
-                  }}
-                />
-                <h3 className="font-semibold text-sm mb-1">{concept.name}</h3>
-                <p className="text-xs text-gray-500">{concept.description}</p>
+                <div className="text-4xl mb-2">{style.icon}</div>
+                <h3 className="font-semibold text-sm mb-1">{style.name}</h3>
+                <p className="text-xs text-gray-500">{style.description}</p>
               </button>
             ))}
           </div>
@@ -323,7 +370,7 @@ export default function CardCreator() {
             </button>
             <button
               onClick={() => setStep(3)}
-              disabled={!selectedConcept}
+              disabled={!selectedStyle}
               className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               Далее <ArrowRight size={20} />
@@ -332,11 +379,11 @@ export default function CardCreator() {
         </div>
       )}
 
-      {/* Step 3: Infographic */}
+      {/* Step 3: Info */}
       {step === 3 && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold mb-4">Шаг 3: Добавьте информацию</h2>
-          <p className="text-gray-600 mb-6">Добавьте название и цену товара (необязательно)</p>
+          <h2 className="text-2xl font-bold mb-4">Шаг 3: Добавьте информацию о товаре</h2>
+          <p className="text-gray-600 mb-6">ИИ учтёт эту информацию при создании карточки (необязательно)</p>
 
           <div className="space-y-4 mb-6">
             <div>
@@ -346,7 +393,7 @@ export default function CardCreator() {
                 value={infographicData.title}
                 onChange={(e) => setInfographicData({ ...infographicData, title: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Например: Кроссовки Nike Air Max"
+                placeholder="Например: Крем для лица увлажняющий"
               />
             </div>
             <div>
@@ -356,27 +403,17 @@ export default function CardCreator() {
                 value={infographicData.price}
                 onChange={(e) => setInfographicData({ ...infographicData, price: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Например: 5990"
+                placeholder="Например: 1990"
               />
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Особенности</label>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Особенности товара</label>
               <textarea
                 value={infographicData.features}
                 onChange={(e) => setInfographicData({ ...infographicData, features: e.target.value })}
                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Например: Натуральная кожа, амортизация"
+                placeholder="Например: натуральные ингредиенты, гипоаллергенный, для чувствительной кожи"
                 rows={3}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Материал</label>
-              <input
-                type="text"
-                value={infographicData.material}
-                onChange={(e) => setInfographicData({ ...infographicData, material: e.target.value })}
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Например: 100% хлопок"
               />
             </div>
           </div>
@@ -389,17 +426,17 @@ export default function CardCreator() {
               <ArrowLeft size={20} /> Назад
             </button>
             <button
-              onClick={processImage}
+              onClick={generateCard}
               disabled={isProcessing}
               className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
             >
               {isProcessing ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" /> ИИ обрабатывает...
+                  <Loader2 size={20} className="animate-spin" /> ИИ создаёт карточку...
                 </>
               ) : (
                 <>
-                  <Sparkles size={20} /> Создать с ИИ
+                  <Sparkles size={20} /> Создать продающую карточку
                 </>
               )}
             </button>
@@ -411,7 +448,7 @@ export default function CardCreator() {
       {step === 4 && processedImage && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
           <h2 className="text-2xl font-bold mb-4">🎉 Готово!</h2>
-          <p className="text-gray-600 mb-6">ИИ удалил фон и создал профессиональную карточку</p>
+          <p className="text-gray-600 mb-6">ИИ создал профессиональную продающую карточку в стиле "{selectedStyle?.name}"</p>
 
           <img src={processedImage} alt="Result" className="w-full max-w-md mx-auto rounded-xl mb-6" />
 
@@ -419,9 +456,9 @@ export default function CardCreator() {
             <div className="flex items-start gap-3">
               <CheckCircle2 size={20} className="text-green-600 mt-0.5" />
               <div>
-                <p className="font-semibold text-green-900 mb-1">Карточка готова!</p>
+                <p className="font-semibold text-green-900 mb-1">Продающая карточка готова!</p>
                 <p className="text-sm text-green-800">
-                  Размер: 900x1200 px (3:4) • Формат: JPEG • Готово к загрузке на WB
+                  Размер: 900x1200 px (3:4) • Формат: JPEG • Готово к загрузке на Wildberries
                 </p>
               </div>
             </div>
@@ -453,7 +490,7 @@ export default function CardCreator() {
         </div>
       )}
 
-      {/* Info - Встроенный ИИ инструмент */}
+      {/* Info */}
       <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
         <div className="flex items-start gap-4">
           <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -461,20 +498,20 @@ export default function CardCreator() {
           </div>
           <div className="flex-1">
             <h3 className="font-bold text-green-900 mb-2">
-              🎨 Встроенный ИИ инструмент - полностью бесплатно!
+              🎨 ИИ генерация продающих карточек
             </h3>
             <p className="text-sm text-green-800 mb-3">
-              Этот инструмент использует <strong>искусственный интеллект</strong> для удаления фона прямо в вашем браузере. 
-              Никаких API ключей, никаких оплат, никаких ограничений!
+              Используется <strong>Pollinations AI</strong> с моделью Flux для генерации профессиональных карточек.
+              ИИ создаёт продающие изображения в выбранном стиле с учётом информации о товаре.
             </p>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-green-700">
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-600" />
-                <span>ИИ удаление фона</span>
+                <span>12 профессиональных стилей</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-600" />
-                <span>8 профессиональных фонов</span>
+                <span>Полностью бесплатно</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-600" />
@@ -482,7 +519,7 @@ export default function CardCreator() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-600" />
-                <span>Работает в браузере</span>
+                <span>Без API ключей</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircle2 size={14} className="text-green-600" />
@@ -492,12 +529,6 @@ export default function CardCreator() {
                 <CheckCircle2 size={14} className="text-green-600" />
                 <span>Инфографика и цена</span>
               </div>
-            </div>
-            <div className="mt-4 pt-4 border-t border-green-200">
-              <p className="text-xs text-green-700">
-                <strong>💡 Совет:</strong> Первое использование может занять 30-60 секунд (загрузка ИИ модели). 
-                Последующие обработки будут намного быстрее.
-              </p>
             </div>
           </div>
         </div>
