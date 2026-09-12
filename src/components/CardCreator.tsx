@@ -21,6 +21,8 @@ export default function CardCreator() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processedImage, setProcessedImage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [analysisResult, setAnalysisResult] = useState<{ category: string; confidence: number; suggestedStyle: string; prompt: string } | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Стили карточек с оптимизированными промптами (короткие, эффективные)
@@ -111,7 +113,7 @@ export default function CardCreator() {
     },
   ];
 
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileSelect = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
 
@@ -126,9 +128,32 @@ export default function CardCreator() {
     }
 
     setError(null);
+    setAnalysisResult(null);
+    
     const reader = new FileReader();
-    reader.onload = (e) => {
-      setSelectedImage(e.target?.result as string);
+    reader.onload = async (e) => {
+      const imageDataUrl = e.target?.result as string;
+      setSelectedImage(imageDataUrl);
+      
+      // Автоматически анализируем загруженное фото
+      setIsAnalyzing(true);
+      try {
+        const result = await analyzeImage(imageDataUrl);
+        setAnalysisResult(result);
+        
+        // Автоматически выбираем предложенный стиль
+        const suggestedStyleObj = styles.find(s => s.id === result.suggestedStyle);
+        if (suggestedStyleObj) {
+          setSelectedStyle(suggestedStyleObj);
+        }
+        
+        console.log('Анализ завершён:', result);
+      } catch (err: any) {
+        console.warn('Ошибка анализа изображения:', err.message);
+        // Не показываем ошибку пользователю, анализ не критичен
+      } finally {
+        setIsAnalyzing(false);
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -148,6 +173,109 @@ export default function CardCreator() {
       'Ъ': '', 'Ы': 'Y', 'Ь': '', 'Э': 'E', 'Ю': 'Yu', 'Я': 'Ya',
     };
     return text.split('').map(c => map[c] || c).join('');
+  };
+
+  // Анализ загруженного фото для автоматического определения категории
+  const analyzeImage = async (imageDataUrl: string): Promise<{ category: string; confidence: number; suggestedStyle: string; prompt: string }> => {
+    const apiKey = import.meta.env.VITE_HF_API_KEY;
+    
+    if (!apiKey) {
+      throw new Error('API ключ Hugging Face не настроен');
+    }
+
+    // Конвертируем data URL в blob
+    const response = await fetch(imageDataUrl);
+    const blob = await response.blob();
+
+    // Категории товаров с описаниями для zero-shot classification
+    const categories = [
+      'cosmetics and beauty products',
+      'electronics and gadgets',
+      'fashion clothing and accessories',
+      'food and beverages',
+      'sports equipment',
+      'home and garden items',
+      'automotive parts and accessories',
+      'children toys and products',
+      'luxury premium items',
+      'eco-friendly organic products',
+      'technology and innovation',
+      'minimalist simple design'
+    ];
+
+    console.log('Анализ изображения для определения категории...');
+
+    // Используем модель CLIP для zero-shot classification
+    const analysisResponse = await fetch(
+      'https://api-inference.huggingface.co/models/openai/clip-vit-base-patch32',
+      {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${apiKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          inputs: {
+            image: await blobToBase64(blob)
+          },
+          parameters: {
+            candidate_labels: categories
+          }
+        }),
+        signal: AbortSignal.timeout(30000),
+      }
+    );
+
+    if (!analysisResponse.ok) {
+      throw new Error(`Ошибка анализа изображения: ${analysisResponse.status}`);
+    }
+
+    const analysisResult = await analysisResponse.json();
+    
+    // Получаем наиболее вероятную категорию
+    const topCategory = analysisResult.labels?.[0] || categories[0];
+    const confidence = analysisResult.scores?.[0] || 0;
+
+    console.log(`Определена категория: ${topCategory} (уверенность: ${(confidence * 100).toFixed(1)}%)`);
+
+    // Маппинг категорий на стили
+    const categoryToStyleMap: Record<string, string> = {
+      'cosmetics and beauty products': 'cosmetics',
+      'electronics and gadgets': 'electronics',
+      'fashion clothing and accessories': 'fashion',
+      'food and beverages': 'food',
+      'sports equipment': 'sports',
+      'home and garden items': 'home',
+      'automotive parts and accessories': 'auto',
+      'children toys and products': 'kids',
+      'luxury premium items': 'premium',
+      'eco-friendly organic products': 'eco',
+      'technology and innovation': 'tech',
+      'minimalist simple design': 'minimal'
+    };
+
+    const suggestedStyleId = categoryToStyleMap[topCategory] || 'minimal';
+    const suggestedStyle = styles.find(s => s.id === suggestedStyleId);
+
+    // Создаём промпт на основе анализа
+    const prompt = suggestedStyle?.prompt || styles[11].prompt;
+
+    return {
+      category: topCategory,
+      confidence: confidence,
+      suggestedStyle: suggestedStyleId,
+      prompt: prompt
+    };
+  };
+
+  // Конвертация blob в base64
+  const blobToBase64 = (blob: Blob): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result as string);
+      reader.onerror = reject;
+      reader.readAsDataURL(blob);
+    });
   };
 
   const generateCard = async () => {
@@ -404,9 +532,49 @@ export default function CardCreator() {
           ) : (
             <div className="space-y-4">
               <img src={selectedImage} alt="Selected" className="w-full max-w-md mx-auto rounded-xl" />
+              
+              {/* Результат анализа изображения */}
+              {isAnalyzing && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                  <div className="flex items-center gap-3">
+                    <Loader2 size={20} className="animate-spin text-blue-600" />
+                    <div>
+                      <p className="font-medium text-blue-900">Анализируем ваше фото...</p>
+                      <p className="text-sm text-blue-700">ИИ определяет категорию товара и подбирает стиль</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
+              {analysisResult && !isAnalyzing && (
+                <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle2 size={20} className="text-green-600 mt-0.5" />
+                    <div className="flex-1">
+                      <p className="font-medium text-green-900 mb-1">Фото проанализировано!</p>
+                      <p className="text-sm text-green-800 mb-2">
+                        <strong>Категория:</strong> {analysisResult.category}
+                      </p>
+                      <p className="text-sm text-green-800 mb-2">
+                        <strong>Уверенность:</strong> {(analysisResult.confidence * 100).toFixed(1)}%
+                      </p>
+                      <p className="text-sm text-green-800">
+                        <strong>Рекомендуемый стиль:</strong> {styles.find(s => s.id === analysisResult.suggestedStyle)?.name || 'Минимализм'}
+                      </p>
+                      <p className="text-xs text-green-700 mt-2">
+                        💡 Стиль автоматически выбран на основе анализа вашего фото. Вы можете изменить его на следующем шаге.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              )}
+              
               <div className="flex gap-4">
                 <button
-                  onClick={() => setSelectedImage(null)}
+                  onClick={() => {
+                    setSelectedImage(null);
+                    setAnalysisResult(null);
+                  }}
                   className="flex-1 px-6 py-3 border border-gray-300 rounded-lg hover:bg-gray-50"
                 >
                   Изменить фото
