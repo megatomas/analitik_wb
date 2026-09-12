@@ -1,11 +1,15 @@
 import { useState, useRef } from 'react';
 import { Upload, Download, Loader2, Sparkles, ArrowRight, ArrowLeft, CheckCircle2, AlertCircle } from 'lucide-react';
+import { removeBackground } from '@imgly/background-removal';
 
 interface Concept {
   id: string;
   name: string;
   description: string;
   icon: string;
+  type: 'solid' | 'gradient' | 'pattern';
+  color1?: string;
+  color2?: string;
 }
 
 export default function CardCreator() {
@@ -24,14 +28,14 @@ export default function CardCreator() {
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const concepts: Concept[] = [
-    { id: 'studio-white', name: 'Студийное фото', description: 'Каталожная съемка на белом фоне', icon: '📸' },
-    { id: 'studio-gradient', name: 'Студия с градиентом', description: 'Профессиональная съемка с градиентным фоном', icon: '🎨' },
-    { id: 'interior-living', name: 'В интерьере', description: 'Товар в домашней обстановке', icon: '🏠' },
-    { id: 'interior-office', name: 'В офисе', description: 'Товар в офисной обстановке', icon: '💼' },
-    { id: 'lifestyle-outdoor', name: 'На улице', description: 'Товар в городской среде', icon: '🌆' },
-    { id: 'lifestyle-nature', name: 'На природе', description: 'Товар на фоне природы', icon: '🌿' },
-    { id: 'composition-flatlay', name: 'Flatlay', description: 'Композиция сверху', icon: '📐' },
-    { id: 'composition-minimal', name: 'Минимализм', description: 'Минималистичная композиция', icon: '⚪' },
+    { id: 'studio-white', name: 'Белый фон', description: 'Классический каталожный стиль', icon: '⬜', type: 'solid', color1: '#FFFFFF' },
+    { id: 'studio-gradient', name: 'Градиент', description: 'Мягкий градиент от серого к белому', icon: '🎨', type: 'gradient', color1: '#E5E7EB', color2: '#FFFFFF' },
+    { id: 'studio-dark', name: 'Темный фон', description: 'Премиальный темный стиль', icon: '⬛', type: 'solid', color1: '#1F2937' },
+    { id: 'pastel-pink', name: 'Пастельный розовый', description: 'Нежный розовый фон', icon: '🌸', type: 'solid', color1: '#FCE7F3' },
+    { id: 'pastel-blue', name: 'Пастельный голубой', description: 'Свежий голубой фон', icon: '💙', type: 'solid', color1: '#DBEAFE' },
+    { id: 'pastel-green', name: 'Пастельный зеленый', description: 'Натуральный зеленый фон', icon: '💚', type: 'solid', color1: '#D1FAE5' },
+    { id: 'warm-beige', name: 'Теплый бежевый', description: 'Уютный бежевый фон', icon: '🤎', type: 'solid', color1: '#FEF3C7' },
+    { id: 'cool-gray', name: 'Холодный серый', description: 'Современный серый фон', icon: '🩶', type: 'solid', color1: '#F3F4F6' },
   ];
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -63,65 +67,74 @@ export default function CardCreator() {
     setError(null);
 
     try {
-      // Имитация ИИ обработки (в реальности здесь будет API вызов)
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Шаг 1: Удаляем фон с помощью ИИ
+      console.log('Удаление фона с помощью ИИ...');
+      const imageBlob = await fetch(selectedImage).then(r => r.blob());
+      const removedBgBlob = await removeBackground(imageBlob, {
+        progress: (key, current, total) => {
+          console.log(`Прогресс: ${key} - ${((current / total) * 100).toFixed(0)}%`);
+        },
+        output: {
+          format: 'image/png',
+          quality: 0.9,
+        },
+      });
 
-      // Создаем canvas для обработки
+      // Шаг 2: Создаем canvas для финальной обработки
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
       if (!ctx) throw new Error('Не удалось создать canvas');
-
-      const img = new Image();
-      img.crossOrigin = 'anonymous';
-      
-      await new Promise((resolve, reject) => {
-        img.onload = resolve;
-        img.onerror = reject;
-        img.src = selectedImage;
-      });
 
       // Размер для WB (3:4)
       canvas.width = 900;
       canvas.height = 1200;
 
-      // Фон в зависимости от концепции
-      if (selectedConcept.id === 'studio-white') {
-        ctx.fillStyle = '#FFFFFF';
+      // Шаг 3: Рисуем фон
+      if (selectedConcept.type === 'solid') {
+        ctx.fillStyle = selectedConcept.color1 || '#FFFFFF';
         ctx.fillRect(0, 0, 900, 1200);
-      } else if (selectedConcept.id === 'studio-gradient') {
+      } else if (selectedConcept.type === 'gradient') {
         const gradient = ctx.createLinearGradient(0, 0, 0, 1200);
-        gradient.addColorStop(0, '#f8f9fa');
-        gradient.addColorStop(1, '#e9ecef');
+        gradient.addColorStop(0, selectedConcept.color1 || '#E5E7EB');
+        gradient.addColorStop(1, selectedConcept.color2 || '#FFFFFF');
         ctx.fillStyle = gradient;
-        ctx.fillRect(0, 0, 900, 1200);
-      } else {
-        ctx.fillStyle = '#FFFFFF';
         ctx.fillRect(0, 0, 900, 1200);
       }
 
-      // Масштабируем изображение
-      const imgAspectRatio = img.width / img.height;
+      // Шаг 4: Загружаем изображение без фона
+      const productImg = new Image();
+      const productUrl = URL.createObjectURL(removedBgBlob);
+      
+      await new Promise((resolve, reject) => {
+        productImg.onload = resolve;
+        productImg.onerror = reject;
+        productImg.src = productUrl;
+      });
+
+      // Шаг 5: Масштабируем и размещаем товар
+      const imgAspectRatio = productImg.width / productImg.height;
       const canvasAspectRatio = 900 / 1200;
       
       let drawWidth, drawHeight, drawX, drawY;
       
       if (imgAspectRatio > canvasAspectRatio) {
-        drawHeight = 1200 * 0.85;
+        drawHeight = 1200 * 0.75;
         drawWidth = drawHeight * imgAspectRatio;
         drawX = (900 - drawWidth) / 2;
         drawY = (1200 - drawHeight) / 2;
       } else {
-        drawWidth = 900 * 0.85;
+        drawWidth = 900 * 0.75;
         drawHeight = drawWidth / imgAspectRatio;
         drawX = (900 - drawWidth) / 2;
         drawY = (1200 - drawHeight) / 2;
       }
 
-      ctx.drawImage(img, drawX, drawY, drawWidth, drawHeight);
+      ctx.drawImage(productImg, drawX, drawY, drawWidth, drawHeight);
 
-      // Добавляем инфографику если есть данные
+      // Шаг 6: Добавляем инфографику если есть данные
       if (infographicData.title || infographicData.price) {
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+        // Полупрозрачная плашка внизу
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
         ctx.fillRect(0, 1050, 900, 150);
         
         ctx.fillStyle = '#FFFFFF';
@@ -139,10 +152,15 @@ export default function CardCreator() {
         }
       }
 
+      // Шаг 7: Конвертируем в JPEG
       const processedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
       setProcessedImage(processedDataUrl);
       setStep(4);
+
+      // Очищаем URL
+      URL.revokeObjectURL(productUrl);
     } catch (err: any) {
+      console.error('Ошибка обработки:', err);
       setError('Ошибка при обработке изображения: ' + err.message);
     } finally {
       setIsProcessing(false);
@@ -177,28 +195,20 @@ export default function CardCreator() {
         <p className="text-gray-600">Создайте профессиональную карточку товара с помощью ИИ за 3 шага</p>
       </div>
 
-      {/* Бесплатная альтернатива - PixelPanda */}
-      <div className="mb-6 bg-gradient-to-r from-green-50 to-emerald-50 border-2 border-green-300 rounded-xl p-5">
+      {/* Встроенный ИИ инструмент */}
+      <div className="mb-6 bg-gradient-to-r from-blue-50 to-indigo-50 border-2 border-blue-300 rounded-xl p-5">
         <div className="flex items-start gap-3">
-          <div className="w-10 h-10 bg-green-100 rounded-lg flex items-center justify-center flex-shrink-0">
-            <span className="text-2xl">🎁</span>
+          <div className="w-10 h-10 bg-blue-100 rounded-lg flex items-center justify-center flex-shrink-0">
+            <Sparkles size={20} className="text-blue-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-green-900 mb-1">
-              Бесплатная альтернатива с ИИ генерацией
+            <h3 className="font-bold text-blue-900 mb-1">
+              Встроенный ИИ инструмент - полностью бесплатно!
             </h3>
-            <p className="text-sm text-green-800 mb-3">
-              Хотите карточки как в Aidentika.com? Используйте <strong>PixelPanda</strong> - 
-              3 генерации в день бесплатно, без регистрации!
+            <p className="text-sm text-blue-800">
+              Удаление фона с помощью искусственного интеллекта прямо в браузере. 
+              Без API ключей, без оплат, без ограничений!
             </p>
-            <a 
-              href="https://pixelpanda.ai/free-tools/ecommerce-product-photography"
-              target="_blank"
-              rel="noreferrer"
-              className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium"
-            >
-              Попробовать PixelPanda бесплатно →
-            </a>
           </div>
         </div>
       </div>
@@ -276,8 +286,8 @@ export default function CardCreator() {
       {/* Step 2: Concept */}
       {step === 2 && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold mb-4">Шаг 2: Выберите концепцию</h2>
-          <p className="text-gray-600 mb-6">ИИ создаст профессиональное фото в выбранном стиле</p>
+          <h2 className="text-2xl font-bold mb-4">Шаг 2: Выберите фон</h2>
+          <p className="text-gray-600 mb-6">ИИ удалит фон с товара и разместит его на выбранном фоне</p>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
             {concepts.map((concept) => (
@@ -290,7 +300,14 @@ export default function CardCreator() {
                     : 'border-gray-200 hover:border-purple-300'
                 }`}
               >
-                <div className="text-4xl mb-2">{concept.icon}</div>
+                <div 
+                  className="w-full h-20 rounded-lg mb-2 border border-gray-200"
+                  style={{
+                    background: concept.type === 'gradient'
+                      ? `linear-gradient(to bottom, ${concept.color1}, ${concept.color2})`
+                      : concept.color1
+                  }}
+                />
                 <h3 className="font-semibold text-sm mb-1">{concept.name}</h3>
                 <p className="text-xs text-gray-500">{concept.description}</p>
               </button>
@@ -318,8 +335,8 @@ export default function CardCreator() {
       {/* Step 3: Infographic */}
       {step === 3 && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold mb-4">Шаг 3: Добавьте инфографику</h2>
-          <p className="text-gray-600 mb-6">Укажите характеристики товара (необязательно)</p>
+          <h2 className="text-2xl font-bold mb-4">Шаг 3: Добавьте информацию</h2>
+          <p className="text-gray-600 mb-6">Добавьте название и цену товара (необязательно)</p>
 
           <div className="space-y-4 mb-6">
             <div>
@@ -374,15 +391,15 @@ export default function CardCreator() {
             <button
               onClick={processImage}
               disabled={isProcessing}
-              className="flex-1 px-6 py-3 bg-purple-600 text-white rounded-lg hover:bg-purple-700 disabled:bg-gray-300 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="flex-1 px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 text-white rounded-lg hover:from-purple-700 hover:to-indigo-700 disabled:from-gray-300 disabled:to-gray-400 disabled:cursor-not-allowed flex items-center justify-center gap-2 font-medium"
             >
               {isProcessing ? (
                 <>
-                  <Loader2 size={20} className="animate-spin" /> Обработка...
+                  <Loader2 size={20} className="animate-spin" /> ИИ обрабатывает...
                 </>
               ) : (
                 <>
-                  <Sparkles size={20} /> Создать карточку
+                  <Sparkles size={20} /> Создать с ИИ
                 </>
               )}
             </button>
@@ -393,8 +410,8 @@ export default function CardCreator() {
       {/* Step 4: Result */}
       {step === 4 && processedImage && (
         <div className="bg-white rounded-xl p-8 border border-gray-200">
-          <h2 className="text-2xl font-bold mb-4">Готово!</h2>
-          <p className="text-gray-600 mb-6">Ваша карточка готова к загрузке на Wildberries</p>
+          <h2 className="text-2xl font-bold mb-4">🎉 Готово!</h2>
+          <p className="text-gray-600 mb-6">ИИ удалил фон и создал профессиональную карточку</p>
 
           <img src={processedImage} alt="Result" className="w-full max-w-md mx-auto rounded-xl mb-6" />
 
@@ -436,43 +453,50 @@ export default function CardCreator() {
         </div>
       )}
 
-      {/* Info - Бесплатная альтернатива */}
-      <div className="mt-8 bg-gradient-to-r from-purple-50 to-indigo-50 border border-purple-200 rounded-xl p-6">
+      {/* Info - Встроенный ИИ инструмент */}
+      <div className="mt-8 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
         <div className="flex items-start gap-4">
-          <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center flex-shrink-0">
-            <Sparkles size={24} className="text-purple-600" />
+          <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center flex-shrink-0">
+            <Sparkles size={24} className="text-green-600" />
           </div>
           <div className="flex-1">
-            <h3 className="font-bold text-purple-900 mb-2">
-              🎨 Хотите карточки как в Aidentika.com? Бесплатно!
+            <h3 className="font-bold text-green-900 mb-2">
+              🎨 Встроенный ИИ инструмент - полностью бесплатно!
             </h3>
-            <p className="text-sm text-purple-800 mb-4">
-              Используйте <strong>PixelPanda</strong> - бесплатный AI-генератор карточек товаров. 
-              3 генерации в день без регистрации, отличное качество, готово для Wildberries/Amazon/Shopify.
+            <p className="text-sm text-green-800 mb-3">
+              Этот инструмент использует <strong>искусственный интеллект</strong> для удаления фона прямо в вашем браузере. 
+              Никаких API ключей, никаких оплат, никаких ограничений!
             </p>
-            <div className="flex flex-wrap gap-3">
-              <a 
-                href="https://pixelpanda.ai/free-tools/ecommerce-product-photography"
-                target="_blank"
-                rel="noreferrer"
-                className="inline-flex items-center gap-2 px-5 py-2.5 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors font-medium"
-              >
-                Открыть PixelPanda (бесплатно) →
-              </a>
-              <div className="flex items-center gap-2 text-xs text-purple-600">
-                <CheckCircle2 size={14} />
-                <span>3 генерации/день</span>
-                <CheckCircle2 size={14} />
-                <span>Без регистрации</span>
-                <CheckCircle2 size={14} />
-                <span>10 профессиональных сцен</span>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs text-green-700">
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span>ИИ удаление фона</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span>8 профессиональных фонов</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span>Безлимитное использование</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span>Работает в браузере</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span>Размер 900x1200 (WB)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <CheckCircle2 size={14} className="text-green-600" />
+                <span>Инфографика и цена</span>
               </div>
             </div>
-            <div className="mt-4 pt-4 border-t border-purple-200">
-              <p className="text-xs text-purple-700">
-                <strong>Другие бесплатные варианты:</strong> Hugging Face API (бесплатный API), 
-                WithoutBG (open-source), Stable Diffusion (локально). 
-                Подробнее в документации проекта.
+            <div className="mt-4 pt-4 border-t border-green-200">
+              <p className="text-xs text-green-700">
+                <strong>💡 Совет:</strong> Первое использование может занять 30-60 секунд (загрузка ИИ модели). 
+                Последующие обработки будут намного быстрее.
               </p>
             </div>
           </div>
