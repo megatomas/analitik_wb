@@ -1,11 +1,17 @@
 {
-  "name": "sandbox-workspace",
+  "name": "wb-analytics",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "server": "node server/index.js",
+    "server:dev": "NODE_ENV=development node server/index.js",
+    "start": "npm run build && npm run server",
+    "db:init": "node scripts/init-db.js",
+    "setup": "npm install && npm run db:init"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
@@ -14,10 +20,16 @@
     "@imgly/background-removal": "^1.7.0",
     "@supabase/supabase-js": "^2.98.0",
     "@vercel/node": "^13.0.0",
+    "bcrypt": "^6.0.0",
     "canvas-confetti": "^1.9.3",
+    "cors": "^2.8.6",
     "date-fns": "^2.30.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
     "framer-motion": "^11.16.1",
+    "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.294.0",
+    "pg": "^8.23.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^6.8.0",
